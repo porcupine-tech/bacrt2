@@ -486,7 +486,7 @@
 
         // --- 6. Web3 Wallet Global Variables and Functions ---
         // Note: We move the DOM element lookups for the wallet inside window.onload below.
-        const desiredChainId = '0x89'; // Polygon Mainnet
+        const desiredChainId = '0x89'; // Polygon Mainnet (EVM-compatible)
         const desiredChainName = 'Polygon Mainnet (Matic)';
 
         let web3Provider;
@@ -530,10 +530,13 @@
                 
                 if (chainId !== desiredChainId) {
                     chainStatus.innerText = `Please switch to ${desiredChainName}`;
-                    currencyDisplay.innerText = `Currency: Unsupported Network`; // Update currency status
+                    // Update currency status for unsupported network
+                    currencyDisplay.innerText = `Currency: Unsupported Network`; 
                 } else {
                     chainStatus.innerText = `Connected to ${desiredChainName}`;
-                    currencyDisplay.innerText = `Currency: USDT (on Polygon)`; // Set the currency on success
+                    // ***UPDATED FOR SOLANA (DISPLAY ONLY)***
+                    // NOTE: This code uses EVM Web3.js logic (MetaMask). True Solana integration requires a Solana SDK/Adapter.
+                    currencyDisplay.innerText = `Currency: Solana (SOL) Allocation Display`;
                 }
                 
                 // Update UI
