@@ -537,6 +537,7 @@
         }
 
         // --- 6. Web3 Wallet Global Variables and Functions ---
+        // EVM chain parameters are kept for reference but not enforced
         const desiredChainId = '0x89'; // Polygon Mainnet (EVM-compatible)
         const desiredChainName = 'Polygon Mainnet (Matic)';
 
@@ -555,7 +556,7 @@
         let connectMetaMaskBtn;
         let connectPhantomBtn;
         
-        // ERC-20 Token Configuration (USDT on Polygon)
+        // ERC-20 Token Configuration (USDT on Polygon) - Fetches Polygon USDT regardless of current chain
         const usdtContractAddress = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'; 
         // Minimal ABI for fetching a token balance (includes only the 'balanceOf' function)
         const minimalErc20Abi = [
@@ -569,28 +570,46 @@
         ];
 
         /**
-         * Fetches the native coin (MATIC) balance and the ERC-20 token (USDT) balance.
+         * Fetches the native coin (e.g., MATIC) balance and the ERC-20 token (USDT) balance.
          * @param {string} address The wallet address to check.
          */
         async function fetchWalletAllocation(address) {
-            if (!ethersProvider || !address) return;
+            if (!ethersProvider || !address) {
+                currencyDisplay.innerText = `Allocation: Provider/Address Missing`;
+                return;
+            }
 
             try {
-                // 1. Fetch Native Coin Balance (MATIC on Polygon)
-                const maticBalanceWei = await ethersProvider.getBalance(address);
-                const maticBalance = ethers.utils.formatEther(maticBalanceWei);
+                // 1. Fetch Native Coin Balance (E.g., ETH, MATIC, BNB)
+                const nativeBalanceWei = await ethersProvider.getBalance(address);
+                const nativeBalance = ethers.utils.formatEther(nativeBalanceWei);
+                
+                // Fetch the current chain ID to display
+                const chainId = await ethersProvider.send('eth_chainId', []); 
+                const chainNetwork = ethers.providers.getNetwork(parseInt(chainId));
+                const nativeCurrencySymbol = chainNetwork.nativeCurrency ? chainNetwork.nativeCurrency.symbol : 'Native Coin';
 
-                // 2. Fetch ERC-20 Token Balance (USDT)
+                // 2. Fetch ERC-20 Token Balance (Using Polygon USDT address for demonstration)
+                // Note: This contract address will only work if the wallet is on Polygon. 
+                // If it's on a different chain, the balance fetch will fail unless a different contract address is used.
+                // For a multi-chain check, a different token address for the current chain would be required.
                 const usdtContract = new ethers.Contract(usdtContractAddress, minimalErc20Abi, ethersProvider);
-                const usdtBalanceBigNumber = await usdtContract.balanceOf(address);
-                const usdtBalance = ethers.utils.formatUnits(usdtBalanceBigNumber, 6); 
+                let usdtBalanceText = 'N/A';
+
+                try {
+                    const usdtBalanceBigNumber = await usdtContract.balanceOf(address);
+                    const usdtBalance = ethers.utils.formatUnits(usdtBalanceBigNumber, 6); 
+                    usdtBalanceText = `${parseFloat(usdtBalance).toFixed(2)} USDT`;
+                } catch (e) {
+                    usdtBalanceText = `USDT Error (Wrong Chain?)`;
+                }
 
                 // 3. Update UI
                 currencyDisplay.innerHTML = `
                     Allocation: 
-                    <strong>${parseFloat(usdtBalance).toFixed(2)} USDT</strong> 
+                    <strong>${usdtBalanceText}</strong> 
                     | 
-                    <strong>${parseFloat(maticBalance).toFixed(4)} MATIC</strong> (Gas)
+                    <strong>${parseFloat(nativeBalance).toFixed(4)} ${nativeCurrencySymbol}</strong> (Gas)
                 `;
 
             } catch (error) {
@@ -600,7 +619,7 @@
         }
         
         /**
-         * Initializes Ethers.js and handles connection for MetaMask/EVM wallets.
+         * Initializes Ethers.js and handles connection for MetaMask/EVM wallets, without chain enforcement.
          */
         async function connectMetaMask() {
             // Check if MetaMask (or other EVM wallet) is installed
@@ -617,28 +636,26 @@
                 const accounts = await web3Provider.request({ method: 'eth_requestAccounts' });
                 currentAccount = accounts[0];
                 
-                // Check chain ID
-                const chainId = await web3Provider.request({ method: 'eth_chainId' });
+                // 1. Set generic connection status (NO CHAIN CHECK)
+                chainStatus.innerText = `Connected to EVM Chain`;
                 
-                if (chainId !== desiredChainId) {
-                    chainStatus.innerText = `Please switch to ${desiredChainName}`;
-                    currencyDisplay.innerText = `Allocation: Unsupported Network`; 
-                } else {
-                    chainStatus.innerText = `Connected to ${desiredChainName}`;
-                    
-                    // Initialize Ethers and Fetch Balances
-                    ethersProvider = new ethers.providers.Web3Provider(web3Provider);
-                    await fetchWalletAllocation(currentAccount); 
-                }
+                // 2. Initialize Ethers and Fetch Balances unconditionally
+                ethersProvider = new ethers.providers.Web3Provider(web3Provider);
+                await fetchWalletAllocation(currentAccount); 
                 
                 // Update UI
                 walletAddressDisplay.innerText = `Wallet: ${currentAccount.substring(0, 6)}...${currentAccount.substring(currentAccount.length - 4)}`;
                 connectWalletBtn.innerText = 'Wallet Connected';
                 connectWalletBtn.disabled = true;
                 
-                // Listen for account and chain changes
+                // Listen for account and chain changes to keep allocation updated
                 web3Provider.on('accountsChanged', () => window.location.reload());
-                web3Provider.on('chainChanged', () => window.location.reload());
+                web3Provider.on('chainChanged', async () => {
+                    // Re-fetch allocation when chain changes
+                    chainStatus.innerText = `Connected to EVM Chain (Chain changed)`;
+                    ethersProvider = new ethers.providers.Web3Provider(web3Provider);
+                    await fetchWalletAllocation(currentAccount); 
+                });
 
             } catch (error) {
                 console.error("User rejected MetaMask connection or other error:", error);
@@ -649,7 +666,7 @@
         }
         
         /**
-         * Placeholder for Phantom/Solana connection logic.
+         * Handles Phantom/Solana connection logic.
          */
         async function connectPhantom() {
             // Check if Phantom is installed
@@ -661,13 +678,15 @@
             walletSelectionModal.style.display = 'none'; // Hide the selection modal
 
             try {
-                // Placeholder: Use Solana-specific connection method
+                // Use Solana-specific connection method
                 const resp = await window.solana.connect();
                 currentAccount = resp.publicKey.toString(); // Solana Public Key
                 
-                // Since this game is Polygon-based, we display a warning for now
-                chainStatus.innerText = `Connected to Solana Network (Phantom)`;
-                currencyDisplay.innerText = `Allocation: Solana/Phantom connected. Game requires Polygon.`;
+                // Set generic connection status
+                chainStatus.innerText = `Connected to Solana Chain`;
+                
+                // Placeholder for Solana Allocation (requires @solana/web3.js for actual fetch)
+                currencyDisplay.innerText = `Allocation: Solana/Phantom connected. SOL/Token balances require Solana SDK.`;
                 
                 // Update UI
                 walletAddressDisplay.innerText = `Wallet: ${currentAccount.substring(0, 6)}...${currentAccount.substring(currentAccount.length - 4)}`;
@@ -693,7 +712,6 @@
 
 
         // --- 1. Core Game Logic Functions --- 
-        // ... (All game functions: createDeck, shuffleDeck, getBaccaratValue, checkDrawRules, determineWinner remain unchanged)
         /** Creates a new deck of 52 cards (or multiple decks). */
         function createDeck() {
             deck = [];
