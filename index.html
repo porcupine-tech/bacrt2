@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>One-Page Baccarat</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
-
     <style>
         /* --- 1. General Styles --- */
         body {
@@ -35,165 +33,156 @@
 
         h1 {
             text-align: center;
-            color: #ffe08a;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            margin-bottom: 20px;
+            color: #f3dfa2;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+            margin-top: 0;
         }
-
-        /* --- 2. Wallet Connection Styles --- */
-        .wallet-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            margin-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        #connectWalletBtn, #walletStatus, #switchNetworkBtn {
-            padding: 8px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
-
-        #connectWalletBtn {
-            background-color: #007bff;
-            color: white;
-            border: none;
-        }
-
-        #connectWalletBtn:hover {
-            background-color: #0056b3;
-        }
-
-        #walletStatus {
-            background-color: #1e7e34;
-            color: white;
-            border: 1px solid #1e7e34;
-            padding: 8px 15px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 250px;
-        }
-
-        #switchNetworkBtn {
-            background-color: #ffc107;
-            color: black;
-            border: none;
-            display: none; /* Hide by default, show if wrong network */
-            margin-left: 10px;
-        }
-
-        .wallet-info {
-            padding: 10px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-
-        /* --- 3. Game UI Styles --- */
-
-        .game-area {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .player-area, .banker-area {
-            background-color: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            padding: 15px;
+        
+        /* NEW: Wallet Status Area Styles */
+        .wallet-status {
             text-align: center;
-            border: 2px solid transparent;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #c9a44c;
+            border-radius: 10px;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        .wallet-info {
+            font-size: 0.9rem;
+            margin: 5px 0;
+            word-wrap: break-word;
+        }
+        .btn-primary {
+            background-color: #c9a44c;
+            border-bottom-color: #a3813c;
+            color: #000;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background-color: #d8b15d;
+        }
+        .btn-disabled {
+            background-color: #3e444a !important;
+            border-bottom-color: #292d30 !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
         }
 
-        .player-area.winner { border-color: #007bff; box-shadow: 0 0 10px #007bff; }
-        .banker-area.winner { border-color: #dc3545; box-shadow: 0 0 10px #dc3545; }
+        /* --- 2. Game Table Area --- */
+        .table {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start; /* Aligns content to the top */
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 20px 10px;
+            min-height: 250px; /* Increased height for bet zones */
+            position: relative;
+        }
 
-        .score {
-            font-size: 3em;
-            font-weight: bold;
-            margin: 10px 0;
-            color: #ffe08a;
+        .hand-area {
+            width: 30%; /* Reduced width to make space for a center area */
+            text-align: center;
+        }
+        
+        /* Center area for Tie Bet Zone */
+        .hand-area.center-area {
+            width: 30%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .hand-area h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+            color: #f3dfa2;
+        }
+        
+        .hand-area h2 .score {
+            font-weight: 900;
+            display: inline-block;
+            min-width: 30px;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 5px;
+            margin-left: 10px;
         }
 
         .cards {
             min-height: 100px;
             display: flex;
             justify-content: center;
-            gap: 5px;
+            gap: 10px;
             margin-bottom: 15px;
         }
 
-        /* Card styles */
         .card {
-            width: 50px;
-            height: 75px;
-            background-color: white;
-            color: black;
-            border-radius: 5px;
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+            width: 60px;
+            height: 90px;
+            background-color: #fff;
+            color: #000;
+            border-radius: 8px;
+            border: 1px solid #000;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            align-items: center;
             padding: 5px;
-            font-size: 0.8em;
+            font-size: 1.5rem;
+            font-weight: bold;
             position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s;
+            line-height: 1;
         }
 
-        .card.red { color: #dc3545; }
+        .card-red {
+            color: #dc3545; /* Red for Hearts and Diamonds */
+        }
+        
+        .card.hidden {
+            background-color: #333;
+            color: transparent;
+            border: 1px solid #c9a44c;
+            box-shadow: inset 0 0 10px #000;
+            transform: rotateY(180deg);
+        }
 
-        .card-suit {
-            font-size: 1.5em;
+        .card-value-small {
+            font-size: 0.7rem;
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
         }
+        .card-value-small.top-left { top: 5px; left: 5px; }
+        .card-value-small.bottom-right { bottom: 5px; right: 5px; transform: rotate(180deg); }
 
-        /* --- 4. Bet Controls and Chips --- */
-
-        .controls {
+        .bet-zone {
+            min-height: 100px;
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
-        }
-
-        .bet-buttons {
-            display: flex;
-            justify-content: space-around;
-            gap: 10px;
-        }
-
-        .bet-buttons button {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            flex-grow: 1;
-            transition: background-color 0.2s;
-        }
-
-        #betPlayerBtn { background-color: #007bff; color: white; }
-        #betBankerBtn { background-color: #dc3545; color: white; }
-        #betTieBtn { background-color: #6c757d; color: white; }
-
-        #betPlayerBtn:hover { background-color: #0056b3; }
-        #betBankerBtn:hover { background-color: #a71d2a; }
-        #betTieBtn:hover { background-color: #5a6268; }
-
-        .chip-select {
-            display: flex;
+            align-items: center;
             justify-content: center;
-            gap: 15px;
-            padding: 10px 0;
+            margin-top: 10px;
+            position: relative;
         }
-
-        .chip {
+        
+        .bet-zone h3 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+        
+        .bet-zone p {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .chip-stack {
+            position: absolute;
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -201,606 +190,776 @@
             justify-content: center;
             align-items: center;
             font-weight: bold;
-            cursor: pointer;
+            color: white;
+            border: 3px solid rgba(255, 255, 255, 0.7);
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-            border: 3px solid transparent;
-            transition: border-color 0.2s;
+            animation: placeChip 0.3s ease-out forwards;
+            font-size: 0.9rem;
         }
 
-        .chip:hover {
-            opacity: 0.8;
+        .chip-player { background-color: #007bff; /* Blue */ }
+        .chip-banker { background-color: #dc3545; /* Red */ }
+        .chip-tie { background-color: #28a745; /* Green */ font-size: 0.8rem; }
+        
+        @keyframes placeChip {
+            0% { transform: scale(0.5) translateY(-50px); opacity: 0; }
+            100% { transform: scale(1.2) translateY(0); opacity: 1; }
         }
 
-        .chip.selected {
-            border-color: #ffe08a;
-            box-shadow: 0 0 10px #ffe08a;
+        /* --- 3. Controls and Status --- */
+        .controls {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            border: 1px solid #333;
         }
 
-        /* Chip colors */
-        .chip[data-value="1"] { background-color: #ffffff; color: #333; }
-        .chip[data-value="5"] { background-color: #dc3545; color: white; }
-        .chip[data-value="10"] { background-color: #007bff; color: white; }
-        .chip[data-value="25"] { background-color: #28a745; color: white; }
-        .chip[data-value="100"] { background-color: #6f42c1; color: white; }
-
-        .current-bet {
+        .status {
             text-align: center;
-            font-size: 1.1em;
-            padding: 5px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 5px;
+            margin-bottom: 15px;
         }
 
-        .message-area {
-            text-align: center;
-            font-size: 1.2em;
-            min-height: 25px;
-            margin-top: 15px;
+        #balance-display {
+            font-size: 1.5rem;
             font-weight: bold;
+            color: #ffeb3b; /* Gold color */
+            text-shadow: 1px 1px 2px #000;
         }
 
-        #resultMessage {
-            color: #ffc107;
-        }
-
-        .game-buttons {
+        .chip-selection {
             display: flex;
             justify-content: center;
             gap: 15px;
-            margin-top: 20px;
+            margin-bottom: 20px;
         }
 
-        .game-buttons button {
-            padding: 12px 25px;
-            font-size: 1.1em;
-            border: none;
-            border-radius: 8px;
+        .chip {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #c9a44c;
+            color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            border: 3px solid #f3dfa2;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s;
+        }
+
+        .chip:hover {
+            transform: translateY(-2px) scale(1.05);
+        }
+        
+        .chip.selected {
+            border: 5px solid #ff00ff; /* Highlight color */
+            transform: scale(1.1);
+            box-shadow: 0 0 10px #ff00ff;
+        }
+
+        .bet-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: background-color 0.2s;
+            border: none;
+            border-radius: 8px;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.4);
+            border-bottom: 4px solid;
+            user-select: none; /* Prevent text selection */
+        }
+        
+        .btn:active:not(:disabled) {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.4);
         }
 
-        #dealButton {
-            background-color: #28a745;
+        #bet-player-btn { background-color: #007bff; border-bottom-color: #0056b3; color: white; }
+        #bet-player-btn:hover:not(:disabled) { background-color: #0069d9; }
+
+        #bet-banker-btn { background-color: #dc3545; border-bottom-color: #a71d2a; color: white; }
+        #bet-banker-btn:hover:not(:disabled) { background-color: #c82333; }
+
+        #bet-tie-btn { background-color: #28a745; border-bottom-color: #1e7e34; color: white; }
+        #bet-tie-btn:hover:not(:disabled) { background-color: #218838; }
+        
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .btn-action {
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        #recall-button {
+            background-color: #6c757d;
+            border-bottom-color: #4a5056;
             color: white;
+            margin-right: 15px; /* Space between Recall and Deal */
+        }
+        
+        #recall-button:hover:not(:disabled) {
+            background-color: #5a6268;
+        }
+        
+        #recall-button:disabled, #deal-button:disabled {
+            background-color: #3e444a;
+            border-bottom-color: #292d30;
+            cursor: not-allowed;
+            opacity: 0.6;
         }
 
-        #dealButton:hover {
-            background-color: #1e7e34;
+        #deal-button {
+            background-color: #c9a44c; /* Gold/Action color */
+            border-bottom-color: #a3813c;
+            color: #000;
         }
-
-        #recallButton {
-            background-color: #ffc107;
-            color: black;
+        
+        #deal-button:hover:not(:disabled) {
+            background-color: #d8b15d;
         }
-
-        #recallButton:hover {
-            background-color: #e0a800;
-        }
-
-        /* Responsive Design */
+        
+        /* --- 4. Responsive Design --- */
         @media (max-width: 600px) {
-            .game-area {
-                grid-template-columns: 1fr;
+            .table {
+                flex-direction: column;
+                align-items: center;
             }
-            .chip {
-                width: 35px;
-                height: 35px;
-                font-size: 0.9em;
+            .hand-area {
+                width: 80%;
+                margin-bottom: 20px;
+            }
+            .hand-area.center-area {
+                width: 80%;
             }
         }
     </style>
 </head>
-
 <body>
+
     <div class="container">
-        <h1>Baccarat DApp 🃏</h1>
+        <h1>USDT Baccarat</h1>
 
-        <div class="wallet-section">
-            <div id="walletDisplay">
-                <button id="connectWalletBtn">Connect Wallet</button>
-            </div>
+        <div class="wallet-status">
+            <p id="chainStatus" class="wallet-info">Network: Not Connected</p>
+            <p id="walletAddressDisplay" class="wallet-info">Wallet: Disconnected</p>
+            <p id="currencyDisplay" class="wallet-info">Currency: N/A</p>
+            <button id="connectWalletBtn" class="btn btn-action btn-primary">Connect Wallet</button>
         </div>
-
-        <div id="coinAllocation" class="wallet-info" style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; display: none;">
-            <p><strong>Your Coin Allocation (Polygon Mainnet):</strong></p>
-            <div id="maticBalance" style="margin-bottom: 5px;"></div>
-            <div id="usdtBalance"></div>
-            <div id="allocationMessage" style="color: yellow; margin-top: 10px;"></div>
-        </div>
-        <div class="game-area">
-            <div id="playerArea" class="player-area">
-                <h2>Player</h2>
-                <div id="playerCards" class="cards"></div>
-                <div class="score" id="playerScore">0</div>
+        <div class="table">
+            
+            <div class="hand-area player-area">
+                <h2>Player <span class="score" id="player-score">0</span></h2>
+                <div class="cards" id="player-hand">
+                    </div>
+                <div class="bet-zone" id="player-bet-zone">
+                    <h3>Player Bet</h3>
+                    <p id="player-bet-amount">$0</p>
+                    </div>
             </div>
 
-            <div id="bankerArea" class="banker-area">
-                <h2>Banker</h2>
-                <div id="bankerCards" class="cards"></div>
-                <div class="score" id="bankerScore">0</div>
+            <div class="hand-area center-area">
+                <div class="bet-zone" id="tie-bet-zone">
+                    <h3>Tie Bet (8:1)</h3>
+                    <p id="tie-bet-amount">$0</p>
+                    </div>
             </div>
+
+            <div class="hand-area banker-area">
+                <h2>Banker <span class="score" id="banker-score">0</span></h2>
+                <div class="cards" id="banker-hand">
+                    </div>
+                <div class="bet-zone" id="banker-bet-zone">
+                    <h3>Banker Bet</h3>
+                    <p id="banker-bet-amount">$0</p>
+                    </div>
+            </div>
+            
         </div>
 
         <div class="controls">
-            <div class="current-bet">
-                Total Bet: <span id="totalBetAmount">0</span>
+            
+            <div class="status">
+                <p>Balance: <span id="balance-display">$10,000</span></p>
+                <p id="message"></p>
+            </div>
+
+            <div class="chip-selection">
+                <div class="chip" data-value="10">10</div>
+                <div class="chip" data-value="25">25</div>
+                <div class="chip" data-value="100">100</div>
+                <div class="chip" data-value="500">500</div>
+                <div class="chip selected" data-value="1000">1K</div>
             </div>
 
             <div class="bet-buttons">
-                <button id="betPlayerBtn">Bet Player</button>
-                <button id="betBankerBtn">Bet Banker</button>
-                <button id="betTieBtn">Bet Tie</button>
+                <button id="bet-player-btn" class="btn">Bet Player</button>
+                <button id="bet-banker-btn" class="btn">Bet Banker</button>
+                <button id="bet-tie-btn" class="btn">Bet Tie</button>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="recall-button" class="btn btn-action">Recall</button>
+                <button id="deal-button" class="btn btn-action">Deal</button>
             </div>
 
-            <div class="chip-select">
-                <div class="chip selected" data-value="1" style="background-color: #ffffff; color: #333;">$1</div>
-                <div class="chip" data-value="5" style="background-color: #dc3545; color: white;">$5</div>
-                <div class="chip" data-value="10" style="background-color: #007bff; color: white;">$10</div>
-                <div class="chip" data-value="25" style="background-color: #28a745; color: white;">$25</div>
-                <div class="chip" data-value="100" style="background-color: #6f42c1; color: white;">$100</div>
-            </div>
         </div>
 
-        <div class="message-area" id="resultMessage">Place your bet!</div>
+        <audio id="chipSound" src="audio/poker-chips-sfx-3-short.mp3" preload="auto"></audio>
+        <audio id="dealSound" src="audio/deal.mp3" preload="auto"></audio>
+        <audio id="winSound" src="audio/cheering-01.mp3" preload="auto"></audio>
+        <audio id="loseSound" src="audio/boo-01.mp3" preload="auto"></audio>
+        <audio id="bgm" src="audio/Swing-Haven-1-bgm-cutloop.mp3" loop preload="auto"></audio>
 
-        <div class="game-buttons">
-            <button id="dealButton" disabled>Deal</button>
-            <button id="recallButton">Recall Chips</button>
-        </div>
     </div>
 
-
-    <audio id="bgm" loop>
-        <source src="baccarat_bgm.mp3" type="audio/mpeg">
-    </audio>
-
     <script>
-        // --- 0. Global Ethers.js and Wallet Variables ---
-        let ethersProvider;
-        let signer;
-        let userAddress = null;
-        const POLYGON_CHAIN_ID = 137;
-        const CHAIN_ID_HEX = '0x89'; // Hexadecimal for 137
-
-        // Polygon Mainnet USDT (Tether) Contract Details
-        const USDT_ADDRESS = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f";
-        const USDT_DECIMALS = 6;
-        
-        // Minimal ERC-20 ABI for balance fetching
-        const ERC20_ABI = [
-            "function balanceOf(address owner) view returns (uint256)",
-            "function decimals() view returns (uint8)",
-            "function symbol() view returns (string)"
-        ];
-
-        // --- Baccarat Game Variables (Existing) ---
+        // --- 0. Global State & DOM Elements ---
+        let balance = 10000;
+        let selectedChipValue = 1000;
+        let currentBets = { 'Player': 0, 'Banker': 0, 'Tie': 0 };
         let deck = [];
         let playerHand = [];
         let bankerHand = [];
-        let shoeCount = 8;
-        let playerBet = 0;
-        let bankerBet = 0;
-        let tieBet = 0;
-        let selectedChipValue = 1;
-        // This 'virtualBalance' is now only for the front-end game simulation.
-        let virtualBalance = 1000; 
+        let gameInProgress = false;
 
-        // --- DOME Elements (Existing & New) ---
-        const totalBetAmountSpan = document.getElementById('totalBetAmount');
-        const playerScoreDiv = document.getElementById('playerScore');
-        const bankerScoreDiv = document.getElementById('bankerScore');
-        const playerCardsDiv = document.getElementById('playerCards');
-        const bankerCardsDiv = document.getElementById('bankerCards');
-        const resultMessageDiv = document.getElementById('resultMessage');
-        const dealButton = document.getElementById('dealButton');
-        const recallButton = document.getElementById('recallButton');
-        const betPlayerBtn = document.getElementById('betPlayerBtn');
-        const betBankerBtn = document.getElementById('betBankerBtn');
-        const betTieBtn = document.getElementById('betTieBtn');
-        const chipElements = document.querySelectorAll('.chip');
-        const playerArea = document.getElementById('playerArea');
-        const bankerArea = document.getElementById('bankerArea');
+        const balanceDisplay = document.getElementById('balance-display');
+        const messageDisplay = document.getElementById('message');
+        
+        const playerHandEl = document.getElementById('player-hand');
+        const bankerHandEl = document.getElementById('banker-hand');
+        const playerScoreEl = document.getElementById('player-score');
+        const bankerScoreEl = document.getElementById('banker-score');
+        
+        const playerBetAmountEl = document.getElementById('player-bet-amount');
+        const bankerBetAmountEl = document.getElementById('banker-bet-amount');
+        const tieBetAmountEl = document.getElementById('tie-bet-amount');
+        
+        const playerBetZoneEl = document.getElementById('player-bet-zone');
+        const bankerBetZoneEl = document.getElementById('banker-bet-zone');
+        const tieBetZoneEl = document.getElementById('tie-bet-zone');
+        
+        const chipElements = document.querySelectorAll('.chip-selection .chip');
+        const betPlayerBtn = document.getElementById('bet-player-btn');
+        const betBankerBtn = document.getElementById('bet-banker-btn');
+        const betTieBtn = document.getElementById('bet-tie-btn');
+        const dealButton = document.getElementById('deal-button');
+        const recallButton = document.getElementById('recall-button');
+        
+        // Audio elements
+        const chipsSound = document.getElementById('chipSound');
+        const dealSound = document.getElementById('dealSound');
+        const winSound = document.getElementById('winSound');
+        const loseSound = document.getElementById('loseSound');
+        const bgm = document.getElementById('bgm');
 
-        // Wallet Elements
-        let connectWalletBtn = document.getElementById('connectWalletBtn');
-        const walletDisplayDiv = document.getElementById('walletDisplay');
-        const coinAllocationDiv = document.getElementById('coinAllocation');
-        const maticBalanceDiv = document.getElementById('maticBalance');
-        const usdtBalanceDiv = document.getElementById('usdtBalance');
-        const allocationMessageDiv = document.getElementById('allocationMessage');
+        function playSound(soundElement) {
+            soundElement.currentTime = 0;
+            soundElement.play().catch(e => console.log("Audio playback failed:", e));
+        }
+        
+        function startBGM() {
+            bgm.volume = 0.2; // Set a lower volume for background music
+            bgm.play().catch(e => console.log("BGM playback failed:", e));
+        }
 
-        // --- Helper Functions (Game State) ---
+        // Utility function for delay
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
 
-        function updateUI() {
-            // Update virtual balance display (you can integrate this with the wallet balance later)
-            // You can also add logic here to display the virtual balance: document.getElementById('virtualBalanceDisplay').textContent = virtualBalance.toFixed(2);
+        // --- 6. Web3 Wallet Global Variables and Functions ---
+        // Note: We move the DOM element lookups for the wallet inside window.onload below.
+        const desiredChainId = '0x89'; // Polygon Mainnet
+        const desiredChainName = 'Polygon Mainnet (Matic)';
 
-            // Enable/Disable Deal Button
-            dealButton.disabled = (playerBet + bankerBet + tieBet) === 0;
+        let web3Provider;
+        let currentAccount = null;
+        let connectWalletBtn;
+        let walletAddressDisplay;
+        let chainStatus;
+        let currencyDisplay; // NEW GLOBAL VARIABLE
 
-            // Clear previous results highlights
-            playerArea.classList.remove('winner');
-            bankerArea.classList.remove('winner');
+        // Function to check for an Ethereum provider (MetaMask)
+        function checkWalletProvider() {
+            // Re-get DOM elements inside the function to ensure they exist
+            connectWalletBtn = document.getElementById('connectWalletBtn');
+            walletAddressDisplay = document.getElementById('walletAddressDisplay');
+            chainStatus = document.getElementById('chainStatus');
+            currencyDisplay = document.getElementById('currencyDisplay'); // NEW DOM LOOKUP
 
-            // Update bet display
-            totalBetAmountSpan.textContent = (playerBet + bankerBet + tieBet).toFixed(0);
-
-            // Update card displays
-            displayCards(playerHand, playerCardsDiv);
-            displayCards(bankerHand, bankerCardsDiv);
-            playerScoreDiv.textContent = calculateScore(playerHand);
-            bankerScoreDiv.textContent = calculateScore(bankerHand);
-            
-            // Check and Fetch coin allocation if connected
-            if (userAddress) {
-                fetchCoinAllocation();
+            if (window.ethereum) {
+                web3Provider = window.ethereum;
+                connectWalletBtn.innerText = 'Connect MetaMask/Wallet';
+                connectWalletBtn.disabled = false;
+            } else {
+                walletAddressDisplay.innerText = 'Please install a Web3 Wallet (e.g., MetaMask)!';
+                connectWalletBtn.disabled = true;
+                connectWalletBtn.classList.remove('btn-primary');
+                connectWalletBtn.classList.add('btn-disabled');
             }
         }
 
-        // --- Baccarat Game Logic (Minimal Implementation for Completeness) ---
-        
-        const SUITS = ['♠️', '♥️', '♦️', '♣️'];
-        const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        // Function to handle connection logic
+        async function connectWallet() {
+            if (!web3Provider) return;
 
-        function startBGM() {
-            document.getElementById('bgm').play().catch(e => console.log("BGM playback blocked:", e));
+            try {
+                // Request account access (This triggers the MetaMask pop-up)
+                const accounts = await web3Provider.request({ method: 'eth_requestAccounts' });
+                currentAccount = accounts[0];
+                
+                // Check chain ID
+                const chainId = await web3Provider.request({ method: 'eth_chainId' });
+                
+                if (chainId !== desiredChainId) {
+                    chainStatus.innerText = `Please switch to ${desiredChainName}`;
+                    currencyDisplay.innerText = `Currency: Unsupported Network`; // Update currency status
+                } else {
+                    chainStatus.innerText = `Connected to ${desiredChainName}`;
+                }
+                
+                // Update UI
+                walletAddressDisplay.innerText = `Wallet: ${currentAccount.substring(0, 6)}...${currentAccount.substring(currentAccount.length - 4)}`;
+                connectWalletBtn.innerText = 'Wallet Connected';
+                connectWalletBtn.disabled = true;
+                
+                // NEW: Display the assumed crypto currency based on the title (USDT on Polygon)
+                currencyDisplay.innerText = `Currency: USDT (on Polygon)`; 
+                
+                // Listen for account and chain changes
+                web3Provider.on('accountsChanged', () => window.location.reload());
+                web3Provider.on('chainChanged', () => window.location.reload());
+
+            } catch (error) {
+                console.error("User rejected wallet connection or other error:", error);
+                walletAddressDisplay.innerText = 'Connection Failed.';
+                connectWalletBtn.disabled = false;
+                connectWalletBtn.innerText = 'Connect Wallet';
+            }
         }
+        // --- End Web3 Functions ---
 
+        // --- 1. Core Game Logic Functions --- 
+        /** Creates a new deck of 52 cards (or multiple decks). */
         function createDeck() {
             deck = [];
-            for (let s = 0; s < SUITS.length; s++) {
-                for (let r = 0; r < RANKS.length; r++) {
-                    for (let i = 0; i < shoeCount; i++) { // 8 decks
-                        deck.push({ rank: RANKS[r], suit: SUITS[s] });
+            // Simplified to one deck for this example
+            const suits = ['♠', '♥', '♦', '♣'];
+            const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']; 
+            
+            for (let i = 0; i < 6; i++) { // Use 6 decks
+                for (const suit of suits) {
+                    for (const value of values) {
+                        deck.push({ suit, value, display: value });
                     }
                 }
             }
         }
 
+        /** Shuffles the deck using the Fisher-Yates algorithm. */
         function shuffleDeck() {
             for (let i = deck.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [deck[i], deck[j]] = [deck[j], deck[i]];
             }
+            messageDisplay.textContent = 'Deck shuffled. Place your bets!';
         }
 
-        function getCardValue(card) {
-            if (['10', 'J', 'Q', 'K'].includes(card.rank)) return 0;
-            if (card.rank === 'A') return 1;
-            return parseInt(card.rank);
+        /** Calculates the Baccarat value of a hand. */
+        function getBaccaratValue(hand) {
+            let total = hand.reduce((sum, card) => {
+                let value;
+                if (['10', 'J', 'Q', 'K'].includes(card.value)) {
+                    value = 0;
+                } else if (card.value === 'A') {
+                    value = 1;
+                } else {
+                    value = parseInt(card.value);
+                }
+                return sum + value;
+            }, 0);
+            return total % 10;
         }
 
-        function calculateScore(hand) {
-            let score = hand.reduce((sum, card) => sum + getCardValue(card), 0);
-            return score % 10;
+        /** Checks the 'natural' and drawing rules. */
+        function checkDrawRules() {
+            const playerValue = getBaccaratValue(playerHand);
+            const bankerValue = getBaccaratValue(bankerHand);
+
+            // Naturals (Game ends immediately)
+            if (playerValue >= 8 || bankerValue >= 8) {
+                return { playerDraw: false, bankerDraw: false };
+            }
+
+            let playerDraw = false;
+            let bankerDraw = false;
+
+            // Player Draw Rule
+            if (playerValue <= 5) {
+                playerDraw = true;
+            }
+
+            // Banker Draw Rule
+            if (bankerValue <= 2) {
+                bankerDraw = true;
+            } else if (bankerValue === 3) {
+                if (playerHand.length === 3) {
+                    const playerThirdCardValue = playerHand[2].value;
+                    if (getBaccaratValue([{ value: playerThirdCardValue }]) !== 8) {
+                         bankerDraw = true;
+                    }
+                } else {
+                    bankerDraw = true; // Banker always draws against a two-card Player hand
+                }
+            } else if (bankerValue === 4) {
+                if (playerHand.length === 3) {
+                    const playerThirdCardValue = getBaccaratValue([playerHand[2]]);
+                    if (playerThirdCardValue >= 2 && playerThirdCardValue <= 7) {
+                        bankerDraw = true;
+                    }
+                }
+            } else if (bankerValue === 5) {
+                if (playerHand.length === 3) {
+                    const playerThirdCardValue = getBaccaratValue([playerHand[2]]);
+                    if (playerThirdCardValue >= 4 && playerThirdCardValue <= 7) {
+                        bankerDraw = true;
+                    }
+                }
+            } else if (bankerValue === 6) {
+                if (playerHand.length === 3) {
+                    const playerThirdCardValue = getBaccaratValue([playerHand[2]]);
+                    if (playerThirdCardValue === 6 || playerThirdCardCardValue === 7) {
+                        bankerDraw = true;
+                    }
+                }
+            }
+            // If bankerValue is 7, banker stands.
+
+            // If player did not draw a card, banker uses the Player Stand rule (same as when Player has a natural 8/9).
+            if (playerHand.length === 2 && bankerValue >= 3 && bankerValue <= 6) {
+                bankerDraw = (bankerValue <= 5); // Banker draws on 0-5, stands on 6-7
+            }
+
+
+            return { playerDraw, bankerDraw };
         }
 
-        function displayCards(hand, element) {
-            element.innerHTML = hand.map(card => {
-                const isRed = ['♥️', '♦️'].includes(card.suit);
-                return `
-                    <div class="card ${isRed ? 'red' : ''}">
-                        <div>${card.rank}</div>
-                        <div class="card-suit">${card.suit}</div>
-                        <div>${card.rank}</div>
-                    </div>
+        /** Determines the winner of the game. */
+        function determineWinner() {
+            const playerValue = getBaccaratValue(playerHand);
+            const bankerValue = getBaccaratValue(bankerHand);
+
+            if (playerValue === bankerValue) {
+                return 'Tie';
+            } else if (playerValue > bankerValue) {
+                return 'Player';
+            } else {
+                return 'Banker';
+            }
+        }
+
+        // --- 2. UI/DOM Manipulation Functions ---
+        
+        /** Updates all UI elements related to game state. */
+        function updateUI() {
+            balanceDisplay.textContent = `$${balance.toLocaleString()}`;
+            playerScoreEl.textContent = getBaccaratValue(playerHand);
+            bankerScoreEl.textContent = getBaccaratValue(bankerHand);
+            playerBetAmountEl.textContent = `$${currentBets['Player'].toLocaleString()}`;
+            bankerBetAmountEl.textContent = `$${currentBets['Banker'].toLocaleString()}`;
+            tieBetAmountEl.textContent = `$${currentBets['Tie'].toLocaleString()}`;
+            
+            // Render the cards in the hand areas
+            renderHand(playerHand, playerHandEl);
+            renderHand(bankerHand, bankerHandEl);
+            
+            // Enable/Disable buttons
+            const totalBet = currentBets['Player'] + currentBets['Banker'] + currentBets['Tie'];
+            
+            betPlayerBtn.disabled = betBankerBtn.disabled = betTieBtn.disabled = gameInProgress || totalBet >= balance;
+            dealButton.disabled = gameInProgress || totalBet === 0;
+            recallButton.disabled = gameInProgress || totalBet === 0;
+            
+            if (gameInProgress) {
+                betPlayerBtn.classList.add('btn-disabled');
+                betBankerBtn.classList.add('btn-disabled');
+                betTieBtn.classList.add('btn-disabled');
+                dealButton.classList.add('btn-disabled');
+                recallButton.classList.add('btn-disabled');
+            } else {
+                betPlayerBtn.classList.remove('btn-disabled');
+                betBankerBtn.classList.remove('btn-disabled');
+                betTieBtn.classList.remove('btn-disabled');
+                dealButton.classList.remove('btn-disabled');
+                recallButton.classList.remove('btn-disabled');
+            }
+        }
+        
+        /** Renders a hand of cards to a specified DOM element. */
+        function renderHand(hand, element) {
+            element.innerHTML = ''; // Clear previous cards
+            for (const card of hand) {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = `card ${card.suit === '♥' || card.suit === '♦' ? 'card-red' : ''}`;
+                
+                // Add a hidden class for the second Banker card until it's revealed
+                if (element.id === 'banker-hand' && card === hand[1] && hand.length === 2 && gameInProgress) {
+                    cardDiv.classList.add('hidden');
+                } else if (element.id === 'banker-hand' && card === hand[2] && hand.length === 3 && gameInProgress) {
+                    cardDiv.classList.add('hidden');
+                } else if (element.id === 'player-hand' && card === hand[2] && hand.length === 3 && gameInProgress) {
+                    cardDiv.classList.add('hidden');
+                }
+
+                cardDiv.innerHTML = `
+                    <span class="card-value-small top-left">${card.display}${card.suit}</span>
+                    <span class="card-suit">${card.suit}</span>
+                    <span class="card-value-small bottom-right">${card.display}${card.suit}</span> 
                 `;
-            }).join('');
+                element.appendChild(cardDiv);
+            }
+        }
+        
+        /** Places a visual chip stack in the correct bet zone. */
+        function renderChip(zoneId, zoneClass, amount) {
+            const zoneEl = document.getElementById(zoneId);
+            // Clear existing chip stack to update the total
+            zoneEl.querySelectorAll('.chip-stack').forEach(c => c.remove());
+            
+            if (amount > 0) {
+                const chip = document.createElement('div');
+                chip.className = `chip-stack ${zoneClass}`;
+                chip.textContent = `$${amount.toLocaleString()}`;
+                zoneEl.appendChild(chip);
+            }
+        }
+        
+        /** Clears the chips from the table. */
+        function clearBetZones() {
+            playerBetZoneEl.innerHTML = '<h3>Player Bet</h3><p id="player-bet-amount">$0</p>';
+            bankerBetZoneEl.innerHTML = '<h3>Banker Bet</h3><p id="banker-bet-amount">$0</p>';
+            tieBetZoneEl.innerHTML = '<h3>Tie Bet (8:1)</h3><p id="tie-bet-amount">$0</p>';
         }
 
-        function placeBet(target) {
+        // --- 3. Interaction Handlers ---
+        
+        /** Handles placing a bet. */
+        function placeBet(zone) {
+            if (gameInProgress) return;
+            if (balance < selectedChipValue) {
+                messageDisplay.textContent = 'Insufficient balance!';
+                return;
+            }
+            
             const betAmount = selectedChipValue;
-
-            if (virtualBalance < betAmount) {
-                resultMessageDiv.textContent = "Insufficient virtual balance!";
-                return;
+            
+            balance -= betAmount;
+            currentBets[zone] += betAmount;
+            
+            let zoneClass, zoneId;
+            if (zone === 'Player') {
+                zoneClass = 'chip-player';
+                zoneId = 'player-bet-zone';
+            } else if (zone === 'Banker') {
+                zoneClass = 'chip-banker';
+                zoneId = 'banker-bet-zone';
+            } else { // Tie
+                zoneClass = 'chip-tie';
+                zoneId = 'tie-bet-zone';
             }
-
-            virtualBalance -= betAmount;
-            if (target === 'Player') playerBet += betAmount;
-            else if (target === 'Banker') bankerBet += betAmount;
-            else if (target === 'Tie') tieBet += betAmount;
-
-            resultMessageDiv.textContent = `Bet of $${betAmount} placed on ${target}.`;
+            
+            renderChip(zoneId, zoneClass, currentBets[zone]);
             updateUI();
+            playSound(chipsSound);
+            messageDisplay.textContent = `Bet $${betAmount.toLocaleString()} on ${zone}.`;
         }
 
+        /** Handles recalling chips before the deal. */
         function recallChips() {
-            virtualBalance += playerBet + bankerBet + tieBet;
-            playerBet = 0;
-            bankerBet = 0;
-            tieBet = 0;
-            resultMessageDiv.textContent = "All chips recalled.";
+            if (gameInProgress) return;
+            
+            let totalRecalled = 0;
+            for (const zone in currentBets) {
+                totalRecalled += currentBets[zone];
+                currentBets[zone] = 0;
+            }
+            
+            balance += totalRecalled;
+            clearBetZones();
             updateUI();
+            messageDisplay.textContent = `All $${totalRecalled.toLocaleString()} chips recalled.`;
         }
 
-        function dealCard(hand) {
-            if (deck.length === 0) {
-                createDeck();
-                shuffleDeck();
-                resultMessageDiv.textContent = "Shuffling a new shoe...";
-            }
-            hand.push(deck.pop());
-        }
+        /** The main game flow function. */
+        async function dealGame() {
+            if (gameInProgress || (currentBets['Player'] + currentBets['Banker'] + currentBets['Tie'] === 0)) return;
 
-        function dealGame() {
-            if (playerBet + bankerBet + tieBet === 0) {
-                resultMessageDiv.textContent = "Please place a bet before dealing.";
-                return;
-            }
-
-            // Reset hands
+            gameInProgress = true;
+            messageDisplay.textContent = 'Shuffling and dealing...';
+            
+            // Clear hands from previous game
             playerHand = [];
             bankerHand = [];
-            playerArea.classList.remove('winner');
-            bankerArea.classList.remove('winner');
-
-            // Deal two cards each
-            dealCard(playerHand);
-            dealCard(bankerHand);
-            dealCard(playerHand);
-            dealCard(bankerHand);
-            updateUI();
-
-            let pScore = calculateScore(playerHand);
-            let bScore = calculateScore(bankerHand);
-
-            let playerDraws = false;
-
-            // Check Naturals
-            if (pScore >= 8 || bScore >= 8) {
-                // Game ends
-            } else {
-                // Player rules
-                if (pScore <= 5) {
-                    dealCard(playerHand);
-                    playerDraws = true;
-                    pScore = calculateScore(playerHand); // Recalculate score
-                }
-                
-                // Banker rules (simplified)
-                if (!playerDraws) {
-                    if (bScore <= 5) {
-                        dealCard(bankerHand);
-                    }
-                } else {
-                    // Simplified Banker rules based on player's third card
-                    let playerThirdCardValue = getCardValue(playerHand[2]);
-                    if (bScore === 3 && playerThirdCardValue !== 8) {
-                        dealCard(bankerHand);
-                    } else if (bScore === 4 && [2, 3, 4, 5, 6, 7].includes(playerThirdCardValue)) {
-                        dealCard(bankerHand);
-                    } else if (bScore === 5 && [4, 5, 6, 7].includes(playerThirdCardValue)) {
-                        dealCard(bankerHand);
-                    } else if (bScore === 6 && [6, 7].includes(playerThirdCardValue)) {
-                        dealCard(bankerHand);
-                    }
-                }
+            
+            // Ensure enough cards for a new game
+            if (deck.length < 52) {
+                createDeck();
+                shuffleDeck();
             }
 
+            // DEALING PHASE
+            // Card 1: Player
+            await sleep(500);
+            playerHand.push(deck.pop());
             updateUI();
-            
-            // Determine winner
-            pScore = calculateScore(playerHand);
-            bScore = calculateScore(bankerHand);
-            
-            let winner = 'Tie';
-            if (pScore > bScore) winner = 'Player';
-            else if (bScore > pScore) winner = 'Banker';
+            playSound(dealSound);
 
-            // Payout and message
-            let message = '';
-            if (winner === 'Tie') {
-                message = 'It\'s a Tie!';
-                virtualBalance += tieBet * 9; 
-                virtualBalance += playerBet; 
-                virtualBalance += bankerBet; 
-            } else if (winner === 'Player') {
-                message = 'Player Wins!';
-                playerArea.classList.add('winner');
-                virtualBalance += playerBet * 2; 
-            } else {
-                message = 'Banker Wins!';
-                bankerArea.classList.add('winner');
-                virtualBalance += bankerBet * 1.95; 
-            }
-            
-            // Reset bets
-            playerBet = 0;
-            bankerBet = 0;
-            tieBet = 0;
-            
-            resultMessageDiv.textContent = message;
-            dealButton.disabled = true;
+            // Card 1: Banker
+            await sleep(500);
+            bankerHand.push(deck.pop());
             updateUI();
-        }
+            playSound(dealSound);
 
-        // --- Web3 & Wallet Functions (Consolidated) ---
+            // Card 2: Player
+            await sleep(500);
+            playerHand.push(deck.pop());
+            updateUI();
+            playSound(dealSound);
 
-        /**
-         * Checks if the browser has an Ethereum provider (e.g., MetaMask).
-         */
-        function checkWalletProvider() {
-            if (typeof window.ethereum !== 'undefined') {
-                connectWalletBtn.textContent = 'Connect Wallet';
-                // Check if already connected
-                window.ethereum.request({ method: 'eth_accounts' })
-                    .then(handleAccountsChanged)
-                    .catch(console.error);
+            // Card 2: Banker (Hidden)
+            await sleep(500);
+            bankerHand.push(deck.pop());
+            updateUI();
+            playSound(dealSound);
+            
+            messageDisplay.textContent = 'Waiting for draw rules...';
 
-                // Add listener for account changes and chain changes
-                window.ethereum.on('accountsChanged', handleAccountsChanged);
-                window.ethereum.on('chainChanged', handleChainChanged);
-            } else {
-                connectWalletBtn.textContent = 'Install MetaMask';
-                connectWalletBtn.onclick = () => window.open("https://metamask.io/", "_blank");
-            }
-        }
+            // DRAWING PHASE
+            await sleep(1000);
+            const { playerDraw, bankerDraw } = checkDrawRules();
 
-        /**
-         * Handles successful connection and account/chain changes.
-         * This function is the core logic that checks the network and fetches balances.
-         */
-        async function handleAccountsChanged(accounts) {
-            if (accounts.length === 0) {
-                // User disconnected logic
-                userAddress = null;
-                connectWalletBtn.style.display = 'inline-block';
-                coinAllocationDiv.style.display = 'none';
-                walletDisplayDiv.innerHTML = '<button id="connectWalletBtn">Connect Wallet</button>';
-                connectWalletBtn = document.getElementById('connectWalletBtn');
-                if (connectWalletBtn) {
-                    connectWalletBtn.addEventListener('click', connectWallet);
-                }
+            // Player Draws Third Card
+            if (playerDraw) {
+                messageDisplay.textContent = 'Player draws third card...';
+                await sleep(1000);
+                playerHand.push(deck.pop());
+                // The card is rendered hidden by the renderHand function
                 updateUI();
-                return;
-            }
-
-            userAddress = accounts[0];
-            ethersProvider = new ethers.providers.Web3Provider(window.ethereum);
-            signer = ethersProvider.getSigner();
-
-            // Check Chain ID
-            const network = await ethersProvider.getNetwork();
-            if (network.chainId !== POLYGON_CHAIN_ID) {
-                displayWrongNetwork(network.chainId);
-            } else {
-                displayConnectedWallet(userAddress, 'Polygon Mainnet');
-                coinAllocationDiv.style.display = 'block';
-                await fetchCoinAllocation(); // Correctly calls the balance fetcher
-            }
-
-            updateUI();
-        }
-        
-        async function handleChainChanged(chainId) {
-            // Force reload to reset provider and state after network switch
-            window.location.reload();
-        }
-
-        /**
-         * Prompts the user to connect their wallet.
-         */
-        async function connectWallet() {
-            if (typeof window.ethereum === 'undefined') {
-                alert('Please install a Web3 wallet like MetaMask to play.');
-                return;
+                playSound(dealSound);
             }
             
-            try {
-                // Request accounts and let handleAccountsChanged process the result
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                await handleAccountsChanged(accounts);
-
-                // Try to switch to Polygon Mainnet if not already there (handleAccountsChanged does initial check)
-                const network = await ethersProvider.getNetwork();
-                if (network.chainId !== POLYGON_CHAIN_ID) {
-                    await switchToPolygon();
-                }
-
-            } catch (error) {
-                console.error("Wallet connection failed:", error);
-                alert("Failed to connect wallet. Please check your MetaMask/Web3 wallet.");
+            // Banker Draws Third Card
+            if (bankerDraw) {
+                messageDisplay.textContent = 'Banker draws third card...';
+                await sleep(1000);
+                bankerHand.push(deck.pop());
+                // The card is rendered hidden by the renderHand function
+                updateUI();
+                playSound(dealSound);
             }
-        }
-
-        /**
-         * Attempts to switch the network to Polygon Mainnet.
-         */
-        async function switchToPolygon() {
-            try {
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: CHAIN_ID_HEX }],
-                });
-            } catch (switchError) {
-                if (switchError.code === 4902) {
-                    try {
-                        // Request to add the Polygon chain if not present
-                        await window.ethereum.request({
-                            method: 'wallet_addEthereumChain',
-                            params: [{
-                                chainId: CHAIN_ID_HEX,
-                                chainName: 'Polygon Mainnet',
-                                rpcUrls: ['https://polygon-rpc.com/'],
-                                nativeCurrency: {
-                                    name: 'MATIC',
-                                    symbol: 'MATIC',
-                                    decimals: 18,
-                                },
-                                blockExplorerUrls: ['https://polygonscan.com/'],
-                            }, ],
-                        });
-                    } catch (addError) {
-                        console.error("Failed to add Polygon network:", addError);
-                        alert("Could not add Polygon Mainnet to your wallet. Please add it manually.");
-                    }
-                } else {
-                    console.error("Failed to switch network:", switchError);
-                }
-            }
-        }
-        
-        function displayConnectedWallet(address, networkName) {
-            const shortAddress = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-            walletDisplayDiv.innerHTML = `
-                <span id="walletStatus" title="${address}">${shortAddress}</span>
-                <span style="font-size: 0.9em; margin-left: 10px;">Network: ${networkName}</span>
-            `;
-        }
-
-        function displayWrongNetwork(chainId) {
-            walletDisplayDiv.innerHTML = `
-                <span id="walletStatus" style="background-color: #dc3545;">Wrong Network (ID: ${chainId})</span>
-                <button id="switchNetworkBtn" onclick="switchToPolygon()">Switch to Polygon</button>
-            `;
-            connectWalletBtn = null;
-        }
-
-        /**
-         * Fetches and displays the MATIC and USDT token balances for the connected wallet.
-         */
-        async function fetchCoinAllocation() {
-            if (!userAddress || !ethersProvider) {
-                allocationMessageDiv.textContent = 'Wallet not connected.';
-                maticBalanceDiv.textContent = '';
-                usdtBalanceDiv.textContent = '';
-                return;
-            }
-
-            allocationMessageDiv.textContent = 'Fetching balances...';
-
-            try {
-                // 1. Fetch MATIC Balance (Native Token)
-                const maticBalanceWei = await ethersProvider.getBalance(userAddress);
-                const maticBalanceEth = ethers.utils.formatEther(maticBalanceWei);
-                maticBalanceDiv.innerHTML = `🟢 **MATIC** (Polygon): **${parseFloat(maticBalanceEth).toFixed(4)}**`;
-
-                // 2. Fetch USDT Balance (ERC-20 Token)
-                const usdtContract = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, ethersProvider);
-                const usdtBalanceRaw = await usdtContract.balanceOf(userAddress);
+            
+            messageDisplay.textContent = 'Revealing cards...';
+            // Reveal all cards by re-rendering without the 'hidden' class logic
+            await sleep(1500);
+            gameInProgress = false;
+            updateUI();
+            
+            // SCORING PHASE
+            const winner = determineWinner();
+            await sleep(1500);
+            
+            // PAYOUT PHASE (Pushes are handled first)
+            let netChange = 0;
+            const betsToResolve = { ...currentBets };
+            currentBets = { 'Player': 0, 'Banker': 0, 'Tie': 0 };
+            
+            if (winner === 'Tie') {
+                messageDisplay.textContent = 'Result: TIE. Bets on Player/Banker PUSH.';
+                playSound(chipsSound);
                 
-                // Format the balance using the known decimals for USDT on Polygon (6)
-                const usdtBalanceFormatted = ethers.utils.formatUnits(usdtBalanceRaw, USDT_DECIMALS);
-                usdtBalanceDiv.innerHTML = `🟡 **USDT** (Tether): **${parseFloat(usdtBalanceFormatted).toFixed(2)}**`;
+                // Tie bet payout (8:1)
+                const tieWinAmount = betsToResolve.Tie * 9;
+                balance += tieWinAmount;
+                netChange += betsToResolve.Tie * 8;
 
-                allocationMessageDiv.textContent = ''; // Clear loading message
+                // Push: Player/Banker bets return original stake
+                balance += betsToResolve.Player;
+                balance += betsToResolve.Banker;
 
-            } catch (error) {
-                console.error("Error fetching coin allocation:", error);
-                allocationMessageDiv.textContent = 'Error fetching balances. Check console for details.';
-                maticBalanceDiv.textContent = '';
-                usdtBalanceDiv.textContent = '';
+            } else if (winner === 'Player') {
+                messageDisplay.textContent = 'Result: PLAYER WINS!';
+                playSound(winSound);
+                
+                // Player bet payout (1:1)
+                const playerWinAmount = betsToResolve.Player * 2;
+                balance += playerWinAmount;
+                netChange += betsToResolve.Player;
+                
+                // Tie bet loses
+                netChange -= betsToResolve.Tie;
+                
+                // Banker bet loses
+                netChange -= betsToResolve.Banker;
+
+            } else { // winner === 'Banker'
+                messageDisplay.textContent = 'Result: BANKER WINS!';
+                playSound(loseSound);
+                
+                // Banker bet payout (0.95:1)
+                const bankerWinAmount = betsToResolve.Banker * 1.95;
+                balance += bankerWinAmount;
+                netChange += betsToResolve.Banker * 0.95;
+                
+                // Tie bet loses
+                netChange -= betsToResolve.Tie;
+                
+                // Player bet loses
+                netChange -= betsToResolve.Player;
             }
+
+            // Final message and cleanup
+            const netMessage = netChange >= 0 ? `+${netChange.toLocaleString()}` : netChange.toLocaleString();
+            messageDisplay.textContent = `${messageDisplay.textContent} (Net: ${netMessage})`;
+            
+            clearBetZones();
+            updateUI();
+            
+            // Check for game over (optional)
+            if (balance <= 0) {
+                messageDisplay.textContent = 'GAME OVER. You are out of funds.';
+                dealButton.disabled = true;
+                betPlayerBtn.disabled = betBankerBtn.disabled = betTieBtn.disabled = true;
+            } else {
+                gameInProgress = false; // Ready for next deal
+            }
+            
+            // *** In a production dApp, a successful bet would result in a transaction 
+            // *** call to your game's smart contract here.
         }
 
         // --- 5. Initial Setup & Event Listeners ---
-        document.addEventListener('DOMContentLoaded', () => {
-
+        window.addEventListener('load', () => {
+            
             // BGM Playback on Interaction
             const attemptBGMStart = () => {
-                // startBGM(); 
+                startBGM();
                 document.body.removeEventListener('click', attemptBGMStart);
                 document.body.removeEventListener('touchstart', attemptBGMStart);
             };
@@ -808,7 +967,7 @@
             document.body.addEventListener('click', attemptBGMStart);
             document.body.addEventListener('touchstart', attemptBGMStart);
             
-            // Existing chip listeners
+            // Existing listeners
             chipElements.forEach(chip => {
                 chip.addEventListener('click', () => {
                     chipElements.forEach(c => c.classList.remove('selected'));
@@ -817,26 +976,27 @@
                 });
             });
             
-            // Initial check for wallet provider and listeners
-            checkWalletProvider();
-            
-            // Re-get the button element now that it's confirmed to exist (either as connect or install)
-            connectWalletBtn = document.getElementById('connectWalletBtn');
-            if (connectWalletBtn) {
-                connectWalletBtn.addEventListener('click', connectWallet);
-            }
-            
-            // Game listeners
             betPlayerBtn.addEventListener('click', () => placeBet('Player'));
             betBankerBtn.addEventListener('click', () => placeBet('Banker'));
             betTieBtn.addEventListener('click', () => placeBet('Tie'));
             dealButton.addEventListener('click', dealGame);
             recallButton.addEventListener('click', recallChips);
             
+            startBGM(); 
+            
             // Initialize game
             createDeck();
             shuffleDeck();
             updateUI();
+            
+            // 🚨 FIX: Ensure the wallet is checked and the listener is attached ONLY after the DOM is ready.
+            checkWalletProvider();
+            
+            // Re-get the button element now that it's confirmed to exist
+            connectWalletBtn = document.getElementById('connectWalletBtn');
+            if (connectWalletBtn) {
+                connectWalletBtn.addEventListener('click', connectWallet);
+            }
         });
     </script>
 
