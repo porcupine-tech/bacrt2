@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>One-Page Baccarat</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+
     <style>
         /* --- 1. General Styles --- */
         body {
@@ -66,7 +68,47 @@
             cursor: not-allowed !important;
             opacity: 0.6;
         }
-
+        
+        /* NEW: Wallet Selection Modal Styles */
+        #walletSelectionModal {
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        #walletSelectionModal h3 {
+            margin-top: 0;
+            font-size: 1.1rem;
+        }
+        .wallet-options {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .btn-wallet {
+            padding: 10px 15px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #connectMetaMaskBtn {
+            background-color: #ff9900;
+            color: white;
+            border-bottom: 4px solid #cc7a00;
+        }
+        #connectMetaMaskBtn:hover:not(:disabled) {
+            background-color: #e68a00;
+        }
+        #connectPhantomBtn {
+            background-color: #8c52ff;
+            color: white;
+            border-bottom: 4px solid #6c32c4;
+        }
+        #connectPhantomBtn:hover:not(:disabled) {
+            background-color: #7942e6;
+        }
         /* --- 2. Game Table Area --- */
         .table {
             display: flex;
@@ -359,8 +401,18 @@
         <div class="wallet-status">
             <p id="chainStatus" class="wallet-info">Network: Not Connected</p>
             <p id="walletAddressDisplay" class="wallet-info">Wallet: Disconnected</p>
-            <p id="currencyDisplay" class="wallet-info">Currency: N/A</p>
+            <p id="currencyDisplay" class="wallet-info">Allocation: N/A</p>
+            
             <button id="connectWalletBtn" class="btn btn-action btn-primary">Connect Wallet</button>
+
+            <div id="walletSelectionModal" style="display: none;">
+                <h3>Choose a Wallet:</h3>
+                <div class="wallet-options">
+                    <button id="connectMetaMaskBtn" class="btn btn-wallet">MetaMask (EVM)</button>
+                    <button id="connectPhantomBtn" class="btn btn-wallet">Phantom (Solana)</button>
+                </div>
+            </div>
+            
         </div>
         <div class="table">
             
@@ -485,40 +537,80 @@
         }
 
         // --- 6. Web3 Wallet Global Variables and Functions ---
-        // Note: We move the DOM element lookups for the wallet inside window.onload below.
         const desiredChainId = '0x89'; // Polygon Mainnet (EVM-compatible)
         const desiredChainName = 'Polygon Mainnet (Matic)';
 
         let web3Provider;
+        let ethersProvider; // Ethers.js Provider
         let currentAccount = null;
+        
+        // Wallet Connection DOM Elements
         let connectWalletBtn;
         let walletAddressDisplay;
         let chainStatus;
-        let currencyDisplay; // NEW GLOBAL VARIABLE
+        let currencyDisplay; 
+        
+        // New Wallet Selection DOM Elements
+        let walletSelectionModal;
+        let connectMetaMaskBtn;
+        let connectPhantomBtn;
+        
+        // ERC-20 Token Configuration (USDT on Polygon)
+        const usdtContractAddress = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'; 
+        // Minimal ABI for fetching a token balance (includes only the 'balanceOf' function)
+        const minimalErc20Abi = [
+            {
+                "constant": true,
+                "inputs": [{"name": "_owner", "type": "address"}],
+                "name": "balanceOf",
+                "outputs": [{"name": "balance", "type": "uint256"}],
+                "type": "function"
+            }
+        ];
 
-        // Function to check for an Ethereum provider (MetaMask)
-        function checkWalletProvider() {
-            // Re-get DOM elements inside the function to ensure they exist
-            connectWalletBtn = document.getElementById('connectWalletBtn');
-            walletAddressDisplay = document.getElementById('walletAddressDisplay');
-            chainStatus = document.getElementById('chainStatus');
-            currencyDisplay = document.getElementById('currencyDisplay'); // NEW DOM LOOKUP
+        /**
+         * Fetches the native coin (MATIC) balance and the ERC-20 token (USDT) balance.
+         * @param {string} address The wallet address to check.
+         */
+        async function fetchWalletAllocation(address) {
+            if (!ethersProvider || !address) return;
 
-            if (window.ethereum) {
-                web3Provider = window.ethereum;
-                connectWalletBtn.innerText = 'Connect MetaMask/Wallet';
-                connectWalletBtn.disabled = false;
-            } else {
-                walletAddressDisplay.innerText = 'Please install a Web3 Wallet (e.g., MetaMask)!';
-                connectWalletBtn.disabled = true;
-                connectWalletBtn.classList.remove('btn-primary');
-                connectWalletBtn.classList.add('btn-disabled');
+            try {
+                // 1. Fetch Native Coin Balance (MATIC on Polygon)
+                const maticBalanceWei = await ethersProvider.getBalance(address);
+                const maticBalance = ethers.utils.formatEther(maticBalanceWei);
+
+                // 2. Fetch ERC-20 Token Balance (USDT)
+                const usdtContract = new ethers.Contract(usdtContractAddress, minimalErc20Abi, ethersProvider);
+                const usdtBalanceBigNumber = await usdtContract.balanceOf(address);
+                const usdtBalance = ethers.utils.formatUnits(usdtBalanceBigNumber, 6); 
+
+                // 3. Update UI
+                currencyDisplay.innerHTML = `
+                    Allocation: 
+                    <strong>${parseFloat(usdtBalance).toFixed(2)} USDT</strong> 
+                    | 
+                    <strong>${parseFloat(maticBalance).toFixed(4)} MATIC</strong> (Gas)
+                `;
+
+            } catch (error) {
+                console.error("Error fetching wallet allocation:", error);
+                currencyDisplay.innerText = `Allocation: Fetch Failed`;
             }
         }
-
-        // Function to handle connection logic
-        async function connectWallet() {
-            if (!web3Provider) return;
+        
+        /**
+         * Initializes Ethers.js and handles connection for MetaMask/EVM wallets.
+         */
+        async function connectMetaMask() {
+            // Check if MetaMask (or other EVM wallet) is installed
+            if (typeof window.ethereum === 'undefined') {
+                alert('MetaMask is not installed. Please install it to connect to EVM chains.');
+                return;
+            }
+            
+            web3Provider = window.ethereum;
+            walletSelectionModal.style.display = 'none'; // Hide the selection modal
 
             try {
                 // Request account access (This triggers the MetaMask pop-up)
@@ -530,13 +622,13 @@
                 
                 if (chainId !== desiredChainId) {
                     chainStatus.innerText = `Please switch to ${desiredChainName}`;
-                    // Update currency status for unsupported network
-                    currencyDisplay.innerText = `Currency: Unsupported Network`; 
+                    currencyDisplay.innerText = `Allocation: Unsupported Network`; 
                 } else {
                     chainStatus.innerText = `Connected to ${desiredChainName}`;
-                    // ***UPDATED FOR SOLANA (DISPLAY ONLY)***
-                    // NOTE: This code uses EVM Web3.js logic (MetaMask). True Solana integration requires a Solana SDK/Adapter.
-                    currencyDisplay.innerText = `Currency: Solana (SOL) Allocation Display`;
+                    
+                    // Initialize Ethers and Fetch Balances
+                    ethersProvider = new ethers.providers.Web3Provider(web3Provider);
+                    await fetchWalletAllocation(currentAccount); 
                 }
                 
                 // Update UI
@@ -549,15 +641,59 @@
                 web3Provider.on('chainChanged', () => window.location.reload());
 
             } catch (error) {
-                console.error("User rejected wallet connection or other error:", error);
-                walletAddressDisplay.innerText = 'Connection Failed.';
+                console.error("User rejected MetaMask connection or other error:", error);
+                walletAddressDisplay.innerText = 'Connection Failed (MetaMask).';
                 connectWalletBtn.disabled = false;
                 connectWalletBtn.innerText = 'Connect Wallet';
             }
         }
-        // --- End Web3 Functions ---
+        
+        /**
+         * Placeholder for Phantom/Solana connection logic.
+         */
+        async function connectPhantom() {
+            // Check if Phantom is installed
+            if (typeof window.solana === 'undefined' || !window.solana.isPhantom) {
+                alert('Phantom is not installed. Please install it to connect to Solana.');
+                return;
+            }
+            
+            walletSelectionModal.style.display = 'none'; // Hide the selection modal
+
+            try {
+                // Placeholder: Use Solana-specific connection method
+                const resp = await window.solana.connect();
+                currentAccount = resp.publicKey.toString(); // Solana Public Key
+                
+                // Since this game is Polygon-based, we display a warning for now
+                chainStatus.innerText = `Connected to Solana Network (Phantom)`;
+                currencyDisplay.innerText = `Allocation: Solana/Phantom connected. Game requires Polygon.`;
+                
+                // Update UI
+                walletAddressDisplay.innerText = `Wallet: ${currentAccount.substring(0, 6)}...${currentAccount.substring(currentAccount.length - 4)}`;
+                connectWalletBtn.innerText = 'Wallet Connected (Phantom)';
+                connectWalletBtn.disabled = true;
+
+            } catch (error) {
+                console.error("User rejected Phantom connection or other error:", error);
+                walletAddressDisplay.innerText = 'Connection Failed (Phantom).';
+                connectWalletBtn.disabled = false;
+                connectWalletBtn.innerText = 'Connect Wallet';
+            }
+        }
+        
+        /**
+         * Toggles the visibility of the wallet selection prompt.
+         */
+        function showWalletSelection() {
+            if (connectWalletBtn.disabled) return;
+            walletSelectionModal.style.display = 'block';
+            connectWalletBtn.style.display = 'none'; // Hide the main button
+        }
+
 
         // --- 1. Core Game Logic Functions --- 
+        // ... (All game functions: createDeck, shuffleDeck, getBaccaratValue, checkDrawRules, determineWinner remain unchanged)
         /** Creates a new deck of 52 cards (or multiple decks). */
         function createDeck() {
             deck = [];
@@ -958,6 +1094,15 @@
         // --- 5. Initial Setup & Event Listeners ---
         window.addEventListener('load', () => {
             
+            // Bind DOM elements after window load
+            connectWalletBtn = document.getElementById('connectWalletBtn');
+            walletAddressDisplay = document.getElementById('walletAddressDisplay');
+            chainStatus = document.getElementById('chainStatus');
+            currencyDisplay = document.getElementById('currencyDisplay'); 
+            walletSelectionModal = document.getElementById('walletSelectionModal');
+            connectMetaMaskBtn = document.getElementById('connectMetaMaskBtn');
+            connectPhantomBtn = document.getElementById('connectPhantomBtn');
+
             // BGM Playback on Interaction
             const attemptBGMStart = () => {
                 startBGM();
@@ -990,14 +1135,10 @@
             shuffleDeck();
             updateUI();
             
-            // 🚨 FIX: Ensure the wallet is checked and the listener is attached ONLY after the DOM is ready.
-            checkWalletProvider();
-            
-            // Re-get the button element now that it's confirmed to exist
-            connectWalletBtn = document.getElementById('connectWalletBtn');
-            if (connectWalletBtn) {
-                connectWalletBtn.addEventListener('click', connectWallet);
-            }
+            // --- NEW: Attach Wallet Selection Listeners ---
+            connectWalletBtn.addEventListener('click', showWalletSelection);
+            connectMetaMaskBtn.addEventListener('click', connectMetaMask);
+            connectPhantomBtn.addEventListener('click', connectPhantom);
         });
     </script>
 
