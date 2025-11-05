@@ -533,15 +533,13 @@
                     currencyDisplay.innerText = `Currency: Unsupported Network`; // Update currency status
                 } else {
                     chainStatus.innerText = `Connected to ${desiredChainName}`;
+                    currencyDisplay.innerText = `Currency: USDT (on Polygon)`; // Set the currency on success
                 }
                 
                 // Update UI
                 walletAddressDisplay.innerText = `Wallet: ${currentAccount.substring(0, 6)}...${currentAccount.substring(currentAccount.length - 4)}`;
                 connectWalletBtn.innerText = 'Wallet Connected';
                 connectWalletBtn.disabled = true;
-                
-                // NEW: Display the assumed crypto currency based on the title (USDT on Polygon)
-                currencyDisplay.innerText = `Currency: USDT (on Polygon)`; 
                 
                 // Listen for account and chain changes
                 web3Provider.on('accountsChanged', () => window.location.reload());
