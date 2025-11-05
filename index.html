@@ -363,7 +363,7 @@
         const POLYGON_CHAIN_ID = 137;
         const CHAIN_ID_HEX = '0x89'; // Hexadecimal for 137
 
-        // USDT Contract Address on Polygon PoS Mainnet
+        // Polygon Mainnet USDT (Tether) Contract Details
         const USDT_ADDRESS = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f";
         const USDT_DECIMALS = 6;
         
@@ -383,8 +383,8 @@
         let bankerBet = 0;
         let tieBet = 0;
         let selectedChipValue = 1;
-        // In a real DApp, this balance would come from a smart contract or local storage
-        let virtualBalance = 1000;
+        // This 'virtualBalance' is now only for the front-end game simulation.
+        let virtualBalance = 1000; 
 
         // --- DOME Elements (Existing & New) ---
         const totalBetAmountSpan = document.getElementById('totalBetAmount');
@@ -402,7 +402,7 @@
         const playerArea = document.getElementById('playerArea');
         const bankerArea = document.getElementById('bankerArea');
 
-        // NEW Wallet Elements
+        // Wallet Elements
         let connectWalletBtn = document.getElementById('connectWalletBtn');
         const walletDisplayDiv = document.getElementById('walletDisplay');
         const coinAllocationDiv = document.getElementById('coinAllocation');
@@ -410,16 +410,16 @@
         const usdtBalanceDiv = document.getElementById('usdtBalance');
         const allocationMessageDiv = document.getElementById('allocationMessage');
 
-        // --- Helper Functions (Existing) ---
+        // --- Helper Functions (Game State) ---
 
         function updateUI() {
             // Update virtual balance display (you can integrate this with the wallet balance later)
-            // ...
+            // You can also add logic here to display the virtual balance: document.getElementById('virtualBalanceDisplay').textContent = virtualBalance.toFixed(2);
 
             // Enable/Disable Deal Button
             dealButton.disabled = (playerBet + bankerBet + tieBet) === 0;
 
-            // Clear previous results
+            // Clear previous results highlights
             playerArea.classList.remove('winner');
             bankerArea.classList.remove('winner');
 
@@ -432,16 +432,194 @@
             playerScoreDiv.textContent = calculateScore(playerHand);
             bankerScoreDiv.textContent = calculateScore(bankerHand);
             
-            // NEW: Fetch and display coin allocation if connected
+            // Check and Fetch coin allocation if connected
             if (userAddress) {
                 fetchCoinAllocation();
             }
         }
 
-        // --- NEW: Web3 & Wallet Functions ---
+        // --- Baccarat Game Logic (Minimal Implementation for Completeness) ---
+        
+        const SUITS = ['♠️', '♥️', '♦️', '♣️'];
+        const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+        function startBGM() {
+            document.getElementById('bgm').play().catch(e => console.log("BGM playback blocked:", e));
+        }
+
+        function createDeck() {
+            deck = [];
+            for (let s = 0; s < SUITS.length; s++) {
+                for (let r = 0; r < RANKS.length; r++) {
+                    for (let i = 0; i < shoeCount; i++) { // 8 decks
+                        deck.push({ rank: RANKS[r], suit: SUITS[s] });
+                    }
+                }
+            }
+        }
+
+        function shuffleDeck() {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        function getCardValue(card) {
+            if (['10', 'J', 'Q', 'K'].includes(card.rank)) return 0;
+            if (card.rank === 'A') return 1;
+            return parseInt(card.rank);
+        }
+
+        function calculateScore(hand) {
+            let score = hand.reduce((sum, card) => sum + getCardValue(card), 0);
+            return score % 10;
+        }
+
+        function displayCards(hand, element) {
+            element.innerHTML = hand.map(card => {
+                const isRed = ['♥️', '♦️'].includes(card.suit);
+                return `
+                    <div class="card ${isRed ? 'red' : ''}">
+                        <div>${card.rank}</div>
+                        <div class="card-suit">${card.suit}</div>
+                        <div>${card.rank}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function placeBet(target) {
+            const betAmount = selectedChipValue;
+
+            if (virtualBalance < betAmount) {
+                resultMessageDiv.textContent = "Insufficient virtual balance!";
+                return;
+            }
+
+            virtualBalance -= betAmount;
+            if (target === 'Player') playerBet += betAmount;
+            else if (target === 'Banker') bankerBet += betAmount;
+            else if (target === 'Tie') tieBet += betAmount;
+
+            resultMessageDiv.textContent = `Bet of $${betAmount} placed on ${target}.`;
+            updateUI();
+        }
+
+        function recallChips() {
+            virtualBalance += playerBet + bankerBet + tieBet;
+            playerBet = 0;
+            bankerBet = 0;
+            tieBet = 0;
+            resultMessageDiv.textContent = "All chips recalled.";
+            updateUI();
+        }
+
+        function dealCard(hand) {
+            if (deck.length === 0) {
+                createDeck();
+                shuffleDeck();
+                resultMessageDiv.textContent = "Shuffling a new shoe...";
+            }
+            hand.push(deck.pop());
+        }
+
+        function dealGame() {
+            if (playerBet + bankerBet + tieBet === 0) {
+                resultMessageDiv.textContent = "Please place a bet before dealing.";
+                return;
+            }
+
+            // Reset hands
+            playerHand = [];
+            bankerHand = [];
+            playerArea.classList.remove('winner');
+            bankerArea.classList.remove('winner');
+
+            // Deal two cards each
+            dealCard(playerHand);
+            dealCard(bankerHand);
+            dealCard(playerHand);
+            dealCard(bankerHand);
+            updateUI();
+
+            let pScore = calculateScore(playerHand);
+            let bScore = calculateScore(bankerHand);
+
+            let playerDraws = false;
+
+            // Check Naturals
+            if (pScore >= 8 || bScore >= 8) {
+                // Game ends
+            } else {
+                // Player rules
+                if (pScore <= 5) {
+                    dealCard(playerHand);
+                    playerDraws = true;
+                    pScore = calculateScore(playerHand); // Recalculate score
+                }
+                
+                // Banker rules (simplified)
+                if (!playerDraws) {
+                    if (bScore <= 5) {
+                        dealCard(bankerHand);
+                    }
+                } else {
+                    // Simplified Banker rules based on player's third card
+                    let playerThirdCardValue = getCardValue(playerHand[2]);
+                    if (bScore === 3 && playerThirdCardValue !== 8) {
+                        dealCard(bankerHand);
+                    } else if (bScore === 4 && [2, 3, 4, 5, 6, 7].includes(playerThirdCardValue)) {
+                        dealCard(bankerHand);
+                    } else if (bScore === 5 && [4, 5, 6, 7].includes(playerThirdCardValue)) {
+                        dealCard(bankerHand);
+                    } else if (bScore === 6 && [6, 7].includes(playerThirdCardValue)) {
+                        dealCard(bankerHand);
+                    }
+                }
+            }
+
+            updateUI();
+            
+            // Determine winner
+            pScore = calculateScore(playerHand);
+            bScore = calculateScore(bankerHand);
+            
+            let winner = 'Tie';
+            if (pScore > bScore) winner = 'Player';
+            else if (bScore > pScore) winner = 'Banker';
+
+            // Payout and message
+            let message = '';
+            if (winner === 'Tie') {
+                message = 'It\'s a Tie!';
+                virtualBalance += tieBet * 9; 
+                virtualBalance += playerBet; 
+                virtualBalance += bankerBet; 
+            } else if (winner === 'Player') {
+                message = 'Player Wins!';
+                playerArea.classList.add('winner');
+                virtualBalance += playerBet * 2; 
+            } else {
+                message = 'Banker Wins!';
+                bankerArea.classList.add('winner');
+                virtualBalance += bankerBet * 1.95; 
+            }
+            
+            // Reset bets
+            playerBet = 0;
+            bankerBet = 0;
+            tieBet = 0;
+            
+            resultMessageDiv.textContent = message;
+            dealButton.disabled = true;
+            updateUI();
+        }
+
+        // --- Web3 & Wallet Functions (Consolidated) ---
 
         /**
-         * Checks if the browser has an Ethereum provider (e.g., MetaMask) and updates the UI.
+         * Checks if the browser has an Ethereum provider (e.g., MetaMask).
          */
         function checkWalletProvider() {
             if (typeof window.ethereum !== 'undefined') {
@@ -451,7 +629,7 @@
                     .then(handleAccountsChanged)
                     .catch(console.error);
 
-                // Add listener for account changes
+                // Add listener for account changes and chain changes
                 window.ethereum.on('accountsChanged', handleAccountsChanged);
                 window.ethereum.on('chainChanged', handleChainChanged);
             } else {
@@ -462,21 +640,20 @@
 
         /**
          * Handles successful connection and account/chain changes.
-         * @param {string[]} accounts - Array of connected addresses.
+         * This function is the core logic that checks the network and fetches balances.
          */
         async function handleAccountsChanged(accounts) {
             if (accounts.length === 0) {
-                // User disconnected
+                // User disconnected logic
                 userAddress = null;
                 connectWalletBtn.style.display = 'inline-block';
                 coinAllocationDiv.style.display = 'none';
                 walletDisplayDiv.innerHTML = '<button id="connectWalletBtn">Connect Wallet</button>';
-                // Re-get the button and attach listener after DOM update
                 connectWalletBtn = document.getElementById('connectWalletBtn');
                 if (connectWalletBtn) {
                     connectWalletBtn.addEventListener('click', connectWallet);
                 }
-                updateUI(); // Update game UI
+                updateUI();
                 return;
             }
 
@@ -491,17 +668,14 @@
             } else {
                 displayConnectedWallet(userAddress, 'Polygon Mainnet');
                 coinAllocationDiv.style.display = 'block';
-                await fetchCoinAllocation();
+                await fetchCoinAllocation(); // Correctly calls the balance fetcher
             }
 
             updateUI();
         }
         
-        /**
-         * Handles chain changes
-         */
         async function handleChainChanged(chainId) {
-            // Reload the page to reset the Ethers.js provider and check the network
+            // Force reload to reset provider and state after network switch
             window.location.reload();
         }
 
@@ -515,18 +689,18 @@
             }
             
             try {
-                // Request accounts
+                // Request accounts and let handleAccountsChanged process the result
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 await handleAccountsChanged(accounts);
 
-                // Try to switch to Polygon Mainnet if not already there
+                // Try to switch to Polygon Mainnet if not already there (handleAccountsChanged does initial check)
                 const network = await ethersProvider.getNetwork();
                 if (network.chainId !== POLYGON_CHAIN_ID) {
                     await switchToPolygon();
                 }
 
             } catch (error) {
-                console.error("User rejected wallet connection:", error);
+                console.error("Wallet connection failed:", error);
                 alert("Failed to connect wallet. Please check your MetaMask/Web3 wallet.");
             }
         }
@@ -538,14 +712,12 @@
             try {
                 await window.ethereum.request({
                     method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: CHAIN_ID_HEX }], // '0x89' is 137
+                    params: [{ chainId: CHAIN_ID_HEX }],
                 });
-                // Handle new chain ID in handleChainChanged
             } catch (switchError) {
-                // This error code indicates that the chain has not been added to MetaMask.
                 if (switchError.code === 4902) {
                     try {
-                        // Request to add the Polygon chain
+                        // Request to add the Polygon chain if not present
                         await window.ethereum.request({
                             method: 'wallet_addEthereumChain',
                             params: [{
@@ -560,7 +732,6 @@
                                 blockExplorerUrls: ['https://polygonscan.com/'],
                             }, ],
                         });
-                        // Handle new chain ID in handleChainChanged
                     } catch (addError) {
                         console.error("Failed to add Polygon network:", addError);
                         alert("Could not add Polygon Mainnet to your wallet. Please add it manually.");
@@ -571,11 +742,6 @@
             }
         }
         
-        /**
-         * Displays the connected wallet address and network status.
-         * @param {string} address - The connected wallet address.
-         * @param {string} networkName - The current network name.
-         */
         function displayConnectedWallet(address, networkName) {
             const shortAddress = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
             walletDisplayDiv.innerHTML = `
@@ -584,21 +750,16 @@
             `;
         }
 
-        /**
-         * Displays a warning if the connected network is wrong.
-         * @param {number} chainId - The connected chain ID.
-         */
         function displayWrongNetwork(chainId) {
             walletDisplayDiv.innerHTML = `
                 <span id="walletStatus" style="background-color: #dc3545;">Wrong Network (ID: ${chainId})</span>
                 <button id="switchNetworkBtn" onclick="switchToPolygon()">Switch to Polygon</button>
             `;
-            // Ensure the connectWalletBtn is correctly setup after network switch
             connectWalletBtn = null;
         }
 
         /**
-         * 🚨 NEW: Fetches and displays the MATIC and USDT token balances for the connected wallet.
+         * Fetches and displays the MATIC and USDT token balances for the connected wallet.
          */
         async function fetchCoinAllocation() {
             if (!userAddress || !ethersProvider) {
@@ -633,16 +794,13 @@
                 usdtBalanceDiv.textContent = '';
             }
         }
-        // --- Existing Game Functions (Omitted for brevity, but they should be in the final script) ---
-        
-        // ... (createDeck, shuffleDeck, getCardValue, calculateScore, displayCards, placeBet, recallChips, dealGame, startBGM, etc.) ...
-        
+
         // --- 5. Initial Setup & Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
 
             // BGM Playback on Interaction
             const attemptBGMStart = () => {
-                // startBGM(); // Keep commented out for a silent DApp
+                // startBGM(); 
                 document.body.removeEventListener('click', attemptBGMStart);
                 document.body.removeEventListener('touchstart', attemptBGMStart);
             };
@@ -650,7 +808,7 @@
             document.body.addEventListener('click', attemptBGMStart);
             document.body.addEventListener('touchstart', attemptBGMStart);
             
-            // Existing listeners
+            // Existing chip listeners
             chipElements.forEach(chip => {
                 chip.addEventListener('click', () => {
                     chipElements.forEach(c => c.classList.remove('selected'));
@@ -659,26 +817,26 @@
                 });
             });
             
-            // Re-get buttons after potential innerHTML overwrite
-            connectWalletBtn = document.getElementById('connectWalletBtn'); 
+            // Initial check for wallet provider and listeners
+            checkWalletProvider();
+            
+            // Re-get the button element now that it's confirmed to exist (either as connect or install)
+            connectWalletBtn = document.getElementById('connectWalletBtn');
             if (connectWalletBtn) {
                 connectWalletBtn.addEventListener('click', connectWallet);
             }
             
-            // Existing game listeners
+            // Game listeners
             betPlayerBtn.addEventListener('click', () => placeBet('Player'));
             betBankerBtn.addEventListener('click', () => placeBet('Banker'));
             betTieBtn.addEventListener('click', () => placeBet('Tie'));
-            // dealButton.addEventListener('click', dealGame); // You'd need to add the dealGame function back for this to work
+            dealButton.addEventListener('click', dealGame);
             recallButton.addEventListener('click', recallChips);
             
             // Initialize game
-            // createDeck(); // You'd need to add the createDeck and shuffleDeck functions back
-            // shuffleDeck();
+            createDeck();
+            shuffleDeck();
             updateUI();
-            
-            // Initial check for wallet provider
-            checkWalletProvider();
         });
     </script>
 
