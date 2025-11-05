@@ -429,11 +429,20 @@
     </div>
 
     <script>
+        // --- 0. Load Web3 Libraries via CDN ---
+        // NOTE: These are required for the Web3Modal connection logic below
+        // The global objects 'ethers', 'Web3Modal', and 'WalletConnectProvider' will be available after this.
+    </script>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.12/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+    <script>
+        
         // --- 0. Global State & DOM Elements ---
-        let balance = 10000;
+        let balance = 10000; // Local simulation balance
         let selectedChipValue = 1000;
         let currentBets = { 'Player': 0, 'Banker': 0, 'Tie': 0 };
-        let deck = [];
+        let deck = []; // Card deck is still needed for UI/visual simulation
         let playerHand = [];
         let bankerHand = [];
         let gameInProgress = false;
@@ -483,73 +492,125 @@
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        // --- 6. Web3 Wallet Global Variables and Functions ---
-        // Note: We move the DOM element lookups for the wallet inside window.onload below.
-        const desiredChainId = '0x89'; // Polygon Mainnet
+        // --------------------------------------------------------------------------------------
+        // --- 6. Web3 Wallet Global Variables and Functions (Web3Modal/Ethers.js) ---
+        // --------------------------------------------------------------------------------------
+        const desiredChainId = 137; // Polygon Mainnet (Decimal)
         const desiredChainName = 'Polygon Mainnet (Matic)';
 
-        let web3Provider;
+        // Ethers.js Global Variables
+        let provider;
+        let signer;
         let currentAccount = null;
+
+        // Web3Modal Instance
+        let web3Modal;
+        
+        // DOM Elements (declared globally, assigned in window.onload)
         let connectWalletBtn;
         let walletAddressDisplay;
         let chainStatus;
 
-        // Function to check for an Ethereum provider (MetaMask)
-        function checkWalletProvider() {
-            // Re-get DOM elements inside the function to ensure they exist
-            connectWalletBtn = document.getElementById('connectWalletBtn');
-            walletAddressDisplay = document.getElementById('walletAddressDisplay');
-            chainStatus = document.getElementById('chainStatus');
+        // Contract Configuration (PLACEHOLDERS: REPLACE WITH YOUR DEPLOYMENT DETAILS)
+        const BACCARAT_CONTRACT_ADDRESS = "0x..."; 
+        // NOTE: You MUST provide your Baccarat contract ABI here for transactions
+        const BACCARAT_ABI = []; 
+        
+        // Function to initialize Web3Modal and providers
+        function initWeb3Modal() {
+            // Setup provider options for Web3Modal
+            const providerOptions = {
+                // 1. WalletConnect Provider (for mobile wallets and QR codes)
+                walletconnect: {
+                    package: WalletConnectProvider.default, // WalletConnect provider
+                    options: {
+                        // Get an Infura ID (or use your own node/URL)
+                        infuraId: "YOUR_INFURA_ID_OR_ETHEREUM_NODE_URL", 
+                        rpc: {
+                            [desiredChainId]: "https://polygon-rpc.com" // Polygon RPC endpoint
+                        },
+                        network: "matic"
+                    }
+                },
+                // Web3Modal automatically handles the 'Injected' provider (like MetaMask)
+            };
 
-            if (window.ethereum) {
-                web3Provider = window.ethereum;
-                connectWalletBtn.innerText = 'Connect MetaMask/Wallet';
-                connectWalletBtn.disabled = false;
-            } else {
-                walletAddressDisplay.innerText = 'Please install a Web3 Wallet (e.g., MetaMask)!';
-                connectWalletBtn.disabled = true;
-                connectWalletBtn.classList.remove('btn-primary');
-                connectWalletBtn.classList.add('btn-disabled');
+            web3Modal = new Web3Modal.default({
+                cacheProvider: true, // Optional - allows to auto-connect to last provider
+                providerOptions, // Required to show the wallet choice list
+                disableInjectedProvider: false, 
+            });
+        }
+
+        function disconnectWallet() {
+            if (web3Modal && web3Modal.cachedProvider) {
+                web3Modal.clearCachedProvider();
             }
+            window.location.reload();
         }
 
         // Function to handle connection logic
         async function connectWallet() {
-            if (!web3Provider) return;
-
+            connectWalletBtn.disabled = true;
+            connectWalletBtn.innerText = 'Connecting...';
+            
             try {
-                // Request account access (This triggers the MetaMask pop-up)
-                const accounts = await web3Provider.request({ method: 'eth_requestAccounts' });
-                currentAccount = accounts[0];
+                // 1. Open the wallet selection modal
+                const web3Provider = await web3Modal.connect();
                 
-                // Check chain ID
-                const chainId = await web3Provider.request({ method: 'eth_chainId' });
+                // 2. Initialize Ethers.js
+                provider = new ethers.providers.Web3Provider(web3Provider);
+                signer = provider.getSigner();
+
+                // 3. Get account and check chain
+                currentAccount = await signer.getAddress();
+                const network = await provider.getNetwork();
                 
-                if (chainId !== desiredChainId) {
+                if (network.chainId !== desiredChainId) {
                     chainStatus.innerText = `Please switch to ${desiredChainName}`;
                 } else {
                     chainStatus.innerText = `Connected to ${desiredChainName}`;
+                    
+                    // 4. Listen for account and chain changes
+                    web3Provider.on('accountsChanged', () => window.location.reload());
+                    web3Provider.on('chainChanged', () => window.location.reload());
+                    web3Provider.on('disconnect', () => disconnectWallet());
+
+                    // 5. Update UI
+                    walletAddressDisplay.innerText = `Wallet: ${currentAccount.substring(0, 6)}...${currentAccount.substring(currentAccount.length - 4)}`;
+                    connectWalletBtn.innerText = 'Wallet Connected';
                 }
-                
-                // Update UI
-                walletAddressDisplay.innerText = `Wallet: ${currentAccount.substring(0, 6)}...${currentAccount.substring(currentAccount.length - 4)}`;
-                connectWalletBtn.innerText = 'Wallet Connected';
-                connectWalletBtn.disabled = true;
-                
-                // Listen for account and chain changes
-                web3Provider.on('accountsChanged', () => window.location.reload());
-                web3Provider.on('chainChanged', () => window.location.reload());
 
             } catch (error) {
-                console.error("User rejected wallet connection or other error:", error);
-                walletAddressDisplay.innerText = 'Connection Failed.';
+                console.error("Wallet connection failed:", error);
+                walletAddressDisplay.innerText = 'Connection Failed. (Check console)';
                 connectWalletBtn.disabled = false;
                 connectWalletBtn.innerText = 'Connect Wallet';
             }
         }
-        // --- End Web3 Functions ---
+        
+        // Initial setup check (simplified)
+        function checkWalletProvider() {
+            connectWalletBtn = document.getElementById('connectWalletBtn');
+            walletAddressDisplay = document.getElementById('walletAddressDisplay');
+            chainStatus = document.getElementById('chainStatus');
 
-        // --- 1. Core Game Logic Functions --- 
+            // Set up Web3Modal which allows wallet selection
+            initWeb3Modal();
+            connectWalletBtn.innerText = 'Connect Wallet';
+            connectWalletBtn.disabled = false;
+
+            // Auto-connect if a provider is cached from a previous session
+            if (web3Modal.cachedProvider) {
+                connectWallet();
+            }
+        }
+        // --- End Web3 Functions ---
+        // --------------------------------------------------------------------------------------
+
+
+        // --- 1. Core Game Logic Functions (Local Simulation Kept for UI updates) --- 
+
         /** Creates a new deck of 52 cards (or multiple decks). */
         function createDeck() {
             deck = [];
@@ -574,6 +635,11 @@
             }
             messageDisplay.textContent = 'Deck shuffled. Place your bets!';
         }
+        
+        // NOTE: The rest of the local game logic (getBaccaratValue, checkDrawRules, determineWinner)
+        // is now functionally obsolete for actual dApp logic but kept to satisfy the UI simulation.
+
+        // ... (getBaccaratValue, checkDrawRules, determineWinner functions remain unchanged)
 
         /** Calculates the Baccarat value of a hand. */
         function getBaccaratValue(hand) {
@@ -668,7 +734,7 @@
             }
         }
 
-        // --- 2. UI/DOM Manipulation Functions ---
+        // --- 2. UI/DOM Manipulation Functions (UNCHANGED) ---
         
         /** Updates all UI elements related to game state. */
         function updateUI() {
@@ -751,7 +817,7 @@
             tieBetZoneEl.innerHTML = '<h3>Tie Bet (8:1)</h3><p id="tie-bet-amount">$0</p>';
         }
 
-        // --- 3. Interaction Handlers ---
+        // --- 3. Interaction Handlers (UNCHANGED) ---
         
         /** Handles placing a bet. */
         function placeBet(zone) {
@@ -800,12 +866,11 @@
             messageDisplay.textContent = `All $${totalRecalled.toLocaleString()} chips recalled.`;
         }
 
-        /** The main game flow function. */
+        /** The main game flow function (REPLACED WITH CONTRACT CALL) */
         async function dealGame() {
             if (gameInProgress || (currentBets['Player'] + currentBets['Banker'] + currentBets['Tie'] === 0)) return;
 
             gameInProgress = true;
-            messageDisplay.textContent = 'Shuffling and dealing...';
             
             // Clear hands from previous game
             playerHand = [];
@@ -817,134 +882,87 @@
                 shuffleDeck();
             }
 
-            // DEALING PHASE
-            // Card 1: Player
-            await sleep(500);
-            playerHand.push(deck.pop());
-            updateUI();
-            playSound(dealSound);
-
-            // Card 1: Banker
-            await sleep(500);
-            bankerHand.push(deck.pop());
-            updateUI();
-            playSound(dealSound);
-
-            // Card 2: Player
-            await sleep(500);
-            playerHand.push(deck.pop());
-            updateUI();
-            playSound(dealSound);
-
-            // Card 2: Banker (Hidden)
-            await sleep(500);
-            bankerHand.push(deck.pop());
-            updateUI();
-            playSound(dealSound);
-            
-            messageDisplay.textContent = 'Waiting for draw rules...';
-
-            // DRAWING PHASE
-            await sleep(1000);
-            const { playerDraw, bankerDraw } = checkDrawRules();
-
-            // Player Draws Third Card
-            if (playerDraw) {
-                messageDisplay.textContent = 'Player draws third card...';
-                await sleep(1000);
-                playerHand.push(deck.pop());
-                // The card is rendered hidden by the renderHand function
-                updateUI();
-                playSound(dealSound);
-            }
-            
-            // Banker Draws Third Card
-            if (bankerDraw) {
-                messageDisplay.textContent = 'Banker draws third card...';
-                await sleep(1000);
-                bankerHand.push(deck.pop());
-                // The card is rendered hidden by the renderHand function
-                updateUI();
-                playSound(dealSound);
-            }
-            
-            messageDisplay.textContent = 'Revealing cards...';
-            // Reveal all cards by re-rendering without the 'hidden' class logic
-            await sleep(1500);
-            gameInProgress = false;
-            updateUI();
-            
-            // SCORING PHASE
-            const winner = determineWinner();
-            await sleep(1500);
-            
-            // PAYOUT PHASE (Pushes are handled first)
-            let netChange = 0;
             const betsToResolve = { ...currentBets };
-            currentBets = { 'Player': 0, 'Banker': 0, 'Tie': 0 };
             
-            if (winner === 'Tie') {
-                messageDisplay.textContent = 'Result: TIE. Bets on Player/Banker PUSH.';
-                playSound(chipsSound);
-                
-                // Tie bet payout (8:1)
-                const tieWinAmount = betsToResolve.Tie * 9;
-                balance += tieWinAmount;
-                netChange += betsToResolve.Tie * 8;
-
-                // Push: Player/Banker bets return original stake
-                balance += betsToResolve.Player;
-                balance += betsToResolve.Banker;
-
-            } else if (winner === 'Player') {
-                messageDisplay.textContent = 'Result: PLAYER WINS!';
-                playSound(winSound);
-                
-                // Player bet payout (1:1)
-                const playerWinAmount = betsToResolve.Player * 2;
-                balance += playerWinAmount;
-                netChange += betsToResolve.Player;
-                
-                // Tie bet loses
-                netChange -= betsToResolve.Tie;
-                
-                // Banker bet loses
-                netChange -= betsToResolve.Banker;
-
-            } else { // winner === 'Banker'
-                messageDisplay.textContent = 'Result: BANKER WINS!';
-                playSound(loseSound);
-                
-                // Banker bet payout (0.95:1)
-                const bankerWinAmount = betsToResolve.Banker * 1.95;
-                balance += bankerWinAmount;
-                netChange += betsToResolve.Banker * 0.95;
-                
-                // Tie bet loses
-                netChange -= betsToResolve.Tie;
-                
-                // Player bet loses
-                netChange -= betsToResolve.Player;
+            // ----------------------------------------------------------------------------------
+            // *** REPLACEMENT: SMART CONTRACT TRANSACTION (The Continuation) ***
+            // ----------------------------------------------------------------------------------
+            
+            if (!currentAccount) {
+                messageDisplay.textContent = 'Please connect your wallet first.';
+                gameInProgress = false;
+                updateUI();
+                return;
             }
+            
+            const totalBet = betsToResolve.Player + betsToResolve.Banker + betsToResolve.Tie;
+            
+            if (totalBet === 0) {
+                messageDisplay.textContent = 'Please place a bet.';
+                gameInProgress = false;
+                updateUI();
+                return;
+            }
+            
+            try {
+                // 1. Prepare Bet Data: Convert local USD bet amounts to contract-compatible token amounts
+                // NOTE: Assumes your token uses 6 decimals (like standard USDT on Polygon)
+                // Total bet is not needed for the call, but useful for display/error handling.
+                
+                // 2. Instantiate the Game Contract
+                // NOTE: You must populate the BACCARAT_CONTRACT_ADDRESS and BACCARAT_ABI above!
+                const gameContract = new ethers.Contract(BACCARAT_CONTRACT_ADDRESS, BACCARAT_ABI, signer);
 
-            // Final message and cleanup
-            const netMessage = netChange >= 0 ? `+${netChange.toLocaleString()}` : netChange.toLocaleString();
-            messageDisplay.textContent = `${messageDisplay.textContent} (Net: ${netMessage})`;
-            
-            clearBetZones();
-            updateUI();
-            
-            // Check for game over (optional)
-            if (balance <= 0) {
-                messageDisplay.textContent = 'GAME OVER. You are out of funds.';
-                dealButton.disabled = true;
-                betPlayerBtn.disabled = betBankerBtn.disabled = betTieBtn.disabled = true;
-            } else {
+                messageDisplay.textContent = `1. Requesting to DEAL $${totalBet.toLocaleString()}... Confirm in wallet. (Check if you approved tokens!)`;
+                
+                // Convert bets to the smallest unit (e.g., Wei or 6 decimals for USDT)
+                const playerBetWei = ethers.utils.parseUnits(betsToResolve.Player.toString(), 6);
+                const bankerBetWei = ethers.utils.parseUnits(betsToResolve.Banker.toString(), 6);
+                const tieBetWei = ethers.utils.parseUnits(betsToResolve.Tie.toString(), 6);
+
+                // Structure the bets as the contract expects (example: using an array of structs)
+                const betsArray = [
+                    { position: 1, amount: playerBetWei }, // Assuming '1' maps to Player in the contract
+                    { position: 2, amount: bankerBetWei }, // Assuming '2' maps to Banker
+                    { position: 3, amount: tieBetWei }     // Assuming '3' maps to Tie
+                ];
+                
+                // 3. Send the Transaction (The "Continuation")
+                const tx = await gameContract.deal(betsArray);
+                
+                messageDisplay.textContent = '2. Transaction sent! Waiting for network confirmation...';
+                
+                // Wait for the transaction to be mined
+                const receipt = await tx.wait(); 
+                
+                messageDisplay.textContent = '3. Deal confirmed! Waiting for game result event...';
+
+                // 4. Handle Result (In a real dApp, you would parse 'receipt.events' 
+                // for the GameResult to update the local 'balance' and UI.)
+                // For this demo, we simulate success and rely on a future token balance fetch.
+                
+                messageDisplay.textContent = '4. Simulation: Transaction successful. Fetching new balance (Not implemented).';
+                
+            } catch (error) {
+                console.error("Deal transaction failed:", error);
+                
+                // Handle a failed transaction (e.g., user rejected)
+                messageDisplay.textContent = 'Deal Transaction Failed: See console for details. Chips returned to balance.';
+                
+                // Refund chips to the local balance since the transaction failed
+                balance += totalBet; 
+                
+            } finally {
+                // Common cleanup
+                currentBets = { 'Player': 0, 'Banker': 0, 'Tie': 0 };
+                clearBetZones();
                 gameInProgress = false; // Ready for next deal
+                updateUI();
             }
-            
-            // *** In a production dApp, a successful bet would result in a transaction 
-            // *** call to your game's smart contract here.
+            // ----------------------------------------------------------------------------------
+            // *** END OF REPLACEMENT ***
+            // ----------------------------------------------------------------------------------
+
         }
 
         // --- 5. Initial Setup & Event Listeners ---
@@ -982,10 +1000,9 @@
             shuffleDeck();
             updateUI();
             
-            // 🚨 FIX: Ensure the wallet is checked and the listener is attached ONLY after the DOM is ready.
+            // Connect Wallet logic
             checkWalletProvider();
             
-            // Re-get the button element now that it's confirmed to exist
             connectWalletBtn = document.getElementById('connectWalletBtn');
             if (connectWalletBtn) {
                 connectWalletBtn.addEventListener('click', connectWallet);
